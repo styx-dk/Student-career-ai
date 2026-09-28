@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from datetime import date
 
 from app.core.database import get_db
 from app.models.entities import SkillDemandHistory, SkillForecast
@@ -25,6 +26,17 @@ def get_forecast(
         .where(SkillForecast.domain == domain, SkillForecast.skill == skill.lower())
         .order_by(SkillForecast.forecast_month)
     ).all()
+    is_experiment = any((row.metrics or {}).get("scope") == "historical_experiment" for row in forecasts)
+    is_past = bool(forecasts) and max(row.forecast_month for row in forecasts) < date.today().replace(day=1)
+    notice = "Predicted trend based on historical job-posting data; it is not a guarantee."
+    if is_experiment:
+        notice = (
+            f"Historical experiment: predictions for {min(r.forecast_month for r in forecasts):%b %Y}–"
+            f"{max(r.forecast_month for r in forecasts):%b %Y}. These are not current market predictions. "
+            "The source has uneven monthly sampling and posting dates that need verification."
+        )
+    elif is_past:
+        notice = "This forecast covers a past period. It is not a current market outlook."
     return {
         "domain": domain,
         "skill": skill.lower(),
@@ -43,7 +55,8 @@ def get_forecast(
             }
             for row in forecasts
         ],
-        "notice": "Predicted trend based on historical job-posting data; it is not a guarantee.",
+        "notice": notice,
+        "scope": "historical_experiment" if is_experiment else "past_forecast" if is_past else "forecast",
         "available": bool(history and forecasts),
     }
 
@@ -57,4 +70,3 @@ def forecast_catalog(db: Session = Depends(get_db)):
     for domain, skill in rows:
         grouped.setdefault(domain, []).append(skill)
     return grouped
-

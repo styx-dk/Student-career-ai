@@ -1,0 +1,156 @@
+[
+  {
+    "domain": "Data Analytics",
+    "skill": "sql",
+    "mae": 0.1111970061400372,
+    "rmse": 0.11662880261368172,
+    "naive_mae": 0.11151562639350736,
+    "beats_naive": true,
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.7529411764705882,
+      0.5921052631578947,
+      0.5176470588235295
+    ],
+    "predicted": [
+      0.6745799879713797,
+      0.6873533440627243,
+      0.677628807839603
+    ],
+    "warnings": [
+      "Non-invertible starting MA parameters found. Using zeros as starting parameters.",
+      "Non-stationary starting autoregressive parameters found. Using zeros as starting parameters."
+    ]
+  },
+  {
+    "domain": "Data Analytics",
+    "skill": "excel",
+    "mae": 0.04019125134110472,
+    "rmse": 0.0559404778887924,
+    "naive_mae": 0.039440558549605674,
+    "beats_naive": false,
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.3411764705882353,
+      0.40789473684210525,
+      0.43529411764705883
+    ],
+    "predicted": [
+      0.4343547526396309,
+      0.43444865832275725,
+      0.4344525671557923
+    ],
+    "warnings": [
+      "Non-invertible starting MA parameters found. Using zeros as starting parameters."
+    ]
+  },
+  {
+    "domain": "Data Analytics",
+    "skill": "power bi",
+    "mae": 0.014824429171787362,
+    "rmse": 0.02000868405777197,
+    "naive_mae": 0.023101326300500685,
+    "beats_naive": true,
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.2235294117647059,
+      0.2631578947368421,
+      0.25882352941176473
+    ],
+    "predicted": [
+      0.2572050256067735,
+      0.25567333654372354,
+      0.2555104139315888
+    ],
+    "warnings": [
+      "Non-invertible starting MA parameters found. Using zeros as starting parameters."
+    ]
+  },
+  {
+    "domain": "Data Analytics",
+    "skill": "aws",
+    "mae": 0.021050362431349164,
+    "rmse": 0.022841257287871296,
+    "naive_mae": 0.018718546547923914,
+    "beats_naive": false,
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.08235294117647059,
+      0.05263157894736842,
+      0.03529411764705882
+    ],
+    "predicted": [
+      0.0688529347803601,
+      0.06878809368376591,
+      0.06878868380859833
+    ],
+    "warnings": []
+  },
+  {
+    "domain": "Data Analytics",
+    "skill": "javascript",
+    "mae": 0.013873787658588122,
+    "rmse": 0.017082510865614537,
+    "naive_mae": 0.03381301838474181,
+    "beats_naive": true,
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.03529411764705882,
+      0.013157894736842105,
+      0.03529411764705882
+    ],
+    "predicted": [
+      0.0454643317362604,
+      0.040660902997788365,
+      0.03924225827267536
+    ],
+    "warnings": []
+  },
+  {
+    "domain": "Data Analytics",
+    "skill": "gcp",
+    "mae": 0.01737072724664215,
+    "rmse": 0.018061763177418165,
+    "naive_mae": 0.04107518250965103,
+    "beats_naive": true,
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.0,
+      0.013157894736842105,
+      0.011764705882352941
+    ],
+    "predicted": [
+      0.024333288268158202,
+      0.02643927567357028,
+      0.02626221841739301
+    ],
+    "warnings": []
+  },
+  {
+    "domain": "Data Analytics",
+    "skill": "pandas",
+    "mae": 0.004168845671248804,
+    "rmse": 0.0057158645012607865,
+    "naive_mae": 0.004463045777115264,
+    "beats_naive": true,
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.03529411764705882,
+      0.02631578947368421,
+      0.023529411764705882
+    ],
+    "predicted": [
+      0.02562629997689482,
+      0.025405084267601245,
+      0.025457425902205327
+    ],
+    "warnings": []
+  }
+]

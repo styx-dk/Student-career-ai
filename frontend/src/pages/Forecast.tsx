@@ -30,10 +30,11 @@ type ForecastData = {
   }>;
   notice: string;
   available: boolean;
+  scope?: string;
 };
 export function Forecast() {
-  const [domain, setDomain] = useState("Software Development");
-  const [skill, setSkill] = useState("");
+  const [domain, setDomain] = useState("Data Analytics");
+  const [skill, setSkill] = useState("sql");
   const [data, setData] = useState<ForecastData>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -109,6 +110,7 @@ export function Forecast() {
       )}
       {data && (
         <>
+          <Notice>{data.notice}</Notice>
           {!data.available ? (
             <Empty
               title="No published forecast"
@@ -121,7 +123,7 @@ export function Forecast() {
                   <h2>
                     {data.skill} · {data.domain}
                   </h2>
-                  <span className="model-chip">ARIMA estimate</span>
+                  <span className="model-chip">{data.scope === "historical_experiment" ? "Historical experiment" : "ARIMA estimate"}</span>
                 </div>
                 <div className="chart">
                   <ResponsiveContainer>
@@ -172,7 +174,6 @@ export function Forecast() {
               </Card>
             </div>
           )}
-          <Notice>{data.notice}</Notice>
         </>
       )}
     </>

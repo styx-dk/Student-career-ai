@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -112,9 +113,13 @@ def create_plan(
     actions = [_candidate(row) for row in db.scalars(query).all()]
     skills, evidence, _ = load_profile_state(db, user.id)
     forecasts = db.scalars(
-        select(SkillForecast).where(SkillForecast.domain == jd.domain).order_by(SkillForecast.forecast_month.desc())
+        select(SkillForecast).where(SkillForecast.domain == jd.domain,
+            SkillForecast.forecast_month >= date.today().replace(day=1)).order_by(SkillForecast.forecast_month.desc())
     ).all() if jd.domain else []
-    signals = {row.skill: max((row.predicted_rate or 0) * 100, 0) for row in forecasts}
+    signals = {}
+    for row in forecasts:
+        if (row.metrics or {}).get("scope") != "historical_experiment":
+            signals.setdefault(row.skill, max((row.predicted_rate or 0) * 100, 0))
     result = greedy_plan(
         jd.requirements, skills, evidence, actions, payload.target_readiness, payload.max_actions, signals
     )
