@@ -9,8 +9,7 @@ def confirmed_profile(db, student_id):
     ).order_by(CareerRecord.start_date.desc(), CareerRecord.title)).all()
     skills = {}
     for record in records:
-        for name in record.skills:
-            key = normalize_skill(name)
+        for key in sorted({normalize_skill(name) for name in record.skills}):
             if key:
                 skills.setdefault(key, []).append({"record_id": str(record.id), "document_id": str(record.source_document_id) if record.source_document_id else None, "title": record.title})
     return {"skills": [{"name": name, "sources": sources} for name, sources in sorted(skills.items())],
@@ -28,7 +27,13 @@ def refresh_summary(db, student_id):
     if not facts["records"]:
         profile.summary = None
     else:
-        names = ", ".join(s["name"] for s in facts["skills"])
-        titles = "; ".join(r["title"] for r in facts["records"])
-        profile.summary = f"Confirmed career records: {titles}." + (f" Documented skills: {names}." if names else "")
+        names = ", ".join(s["name"][:60] for s in facts["skills"][:8])
+        titles = "; ".join(r["title"][:100] for r in facts["records"][:3])
+        profile.summary = (
+            f"Your confirmed profile includes {len(facts['records'])} career records "
+            f"and {len(facts['skills'])} documented skills. "
+            f"Experience includes {titles}."
+            + (f" Skills include {names}." if names else "")
+            + " Explore the profile sections for the full details and supporting sources."
+        )
     return facts

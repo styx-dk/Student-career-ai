@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import CurrentUser, get_current_user
 from app.models.entities import CareerRecord, Education, EvidenceState, StudentProfile, StudentSkill
-from app.services.llm import provider_for
+from app.services.llm import provider_for, public_ai_error
+from app.services.ai_selection import AISelection, ai_selection
 from app.services.profile_state import load_profile_state
 from app.schemas.contracts import ProfileOut, ProfileUpdate
 
@@ -69,7 +70,7 @@ def completeness(user: CurrentUser = Depends(get_current_user), db: Session = De
 
 
 @router.post("/summary", response_model=ProfileOut)
-def generate_summary(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+def generate_summary(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db), selection: AISelection = Depends(ai_selection)):
     profile = db.scalar(select(StudentProfile).where(StudentProfile.student_id == user.id))
     if not profile:
         profile = StudentProfile(student_id=user.id, email=user.email, full_name="")
@@ -79,8 +80,8 @@ def generate_summary(user: CurrentUser = Depends(get_current_user), db: Session 
     if not facts["records"]:
         raise HTTPException(409, "Confirm a document before generating a profile summary")
     try:
-        profile.summary = provider_for("text").generate_profile_summary(facts)
-    except Exception:
-        raise HTTPException(503, "Profile wording unavailable. Your confirmed evidence is saved; try again later.")
+        profile.summary = provider_for("text", selection.provider, selection.model).generate_profile_summary(facts)
+    except Exception as exc:
+        raise HTTPException(503, public_ai_error(exc) + " Your confirmed evidence is saved.") from None
     db.commit(); db.refresh(profile)
     return profile

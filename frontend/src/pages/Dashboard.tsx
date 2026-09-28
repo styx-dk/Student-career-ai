@@ -1,21 +1,176 @@
-import { useEffect, useState } from 'react'
-import { ArrowRight, ArrowUpRight, Upload, UserRound, BriefcaseBusiness, FolderOpen, CheckCircle2, Clock3 } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { api } from '../lib/api'
-import type { DocumentItem } from '../types'
-import { Card, Notice, Spinner, Status } from '../components/UI'
-
-export function Dashboard(){
-  const [docs,setDocs]=useState<DocumentItem[]>()
-  const [error,setError]=useState('')
-  useEffect(()=>{api<DocumentItem[]>('/documents').then(setDocs).catch(e=>setError(e.message))},[])
-  const confirmed=docs?.filter(d=>d.is_confirmed).length||0
-  const review=docs?.filter(d=>d.processing_status==='needs_review').length||0
-  return <div className="student-home"><div className="home-intro"><p className="eyebrow">A LITTLE PROGRESS, EVERY DAY</p><h1>Your future. Your direction.</h1><p>A space for everything you’re learning, building and becoming.</p></div>
-    <section className="home-hero"><div><span className="hero-tag">YOUR CAREER STARTS HERE</span><h2>You have more to offer<br/>than you think.</h2><p>Turn your projects, certificates and experiences into a profile that tells your story.</p><Link className="primary" to="/documents"><Upload size={17}/>Add your work <ArrowRight size={17}/></Link></div><div className="journey-art" aria-hidden="true"><span className="orbit orbit-one"/><span className="orbit orbit-two"/><div className="journey-center"><UserRound size={42}/><b>Your potential</b></div><span className="journey-bubble bubble-one"><CheckCircle2 size={19}/>Skills</span><span className="journey-bubble bubble-two"><FolderOpen size={19}/>Projects</span><span className="journey-bubble bubble-three"><BriefcaseBusiness size={19}/>Possibilities</span></div></section>
-    <div className="section-heading"><div><p className="eyebrow">MAKE YOURSELF AT HOME</p><h2>Three steps to a clearer path</h2></div></div>
-    <div className="journey-cards">{[{to:'/documents',Icon:Upload,n:'01',title:'Bring your work together',text:'Upload certificates, project reports and internship letters.',cta:'Open my documents'},{to:'/profile',Icon:UserRound,n:'02',title:'Discover your strengths',text:'Review your skills and build a profile from your real experience.',cta:'See my profile'},{to:'/jobs',Icon:BriefcaseBusiness,n:'03',title:'Find your next step',text:'Explore a role, understand the gaps and create a plan.',cta:'Explore a role'}].map(({to,Icon,n,title,text,cta})=><Link to={to} className="journey-card" key={n}><div className="journey-card-top"><span><Icon size={22}/></span><small>{n}</small></div><h3>{title}</h3><p>{text}</p><b>{cta}<ArrowUpRight size={16}/></b></Link>)}</div>
-    {error&&<Notice kind="error">{error}</Notice>}
-    {!docs&&!error?<Spinner/>:docs&&<div className="home-bottom"><Card><div className="card-head"><div><p className="eyebrow">YOUR STORY SO FAR</p><h2>Recent documents</h2></div><Link to="/documents">View all <ArrowRight size={16}/></Link></div>{docs.length?docs.slice(0,4).map(d=><Link to="/documents" className="home-file" key={d.id}><span className="file-icon"><FolderOpen size={20}/></span><span><b>{d.display_name}</b><small>{new Date(d.created_at).toLocaleDateString()}</small></span><Status value={d.processing_status.replaceAll('_',' ')}/></Link>):<div className="home-zero"><FolderOpen size={30}/><h3>Your first upload is a great place to start.</h3><p>Even one project or certificate can help your profile grow.</p><Link to="/documents">Upload a document <ArrowRight size={15}/></Link></div>}</Card><Card className="progress-card"><p className="eyebrow">SMALL WINS ADD UP</p><h2>Your progress</h2><div><FolderOpen size={19}/><span>Documents uploaded</span><b>{docs.length}</b></div><div><Clock3 size={19}/><span>Waiting for review</span><b>{review}</b></div><div><CheckCircle2 size={19}/><span>Confirmed documents</span><b>{confirmed}</b></div><Link className="secondary wide" to={review?'/documents':'/profile'}>{review?'Review your documents':'Visit your profile'}<ArrowRight size={15}/></Link></Card></div>}
-  </div>
+import { useEffect, useState } from "react";
+import { ArrowRight, FileText, Upload } from "lucide-react";
+import { Link } from "react-router-dom";
+import { api } from "../lib/api";
+import type { DocumentItem } from "../types";
+import {
+  Card,
+  Empty,
+  Notice,
+  PageHeader,
+  Spinner,
+  Status,
+} from "../components/UI";
+export function Dashboard() {
+  const [docs, setDocs] = useState<DocumentItem[]>();
+  const [error, setError] = useState("");
+  async function load() {
+    setError("");
+    try {
+      setDocs(await api("/documents"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load workspace");
+    }
+  }
+  useEffect(() => {
+    void load();
+  }, []);
+  const review =
+    docs?.filter((d) => d.processing_status === "needs_review") || [];
+  const confirmed = docs?.filter((d) => d.is_confirmed).length || 0;
+  return (
+    <>
+      <PageHeader
+        eyebrow="Your workspace"
+        title="A clear view of your next step."
+        description="Keep your work organized, understand your strengths and prepare for opportunities."
+        action={
+          <Link className="primary" to="/documents">
+            <Upload size={17} />
+            Add documents
+          </Link>
+        }
+      />
+      {error && (
+        <Notice kind="error">
+          {error}{" "}
+          <button className="text-button" onClick={() => void load()}>
+            Retry
+          </button>
+        </Notice>
+      )}
+      {!docs ? (
+        !error && <Spinner />
+      ) : (
+        <>
+          <div className="metric-grid">
+            <Card>
+              <span>Documents</span>
+              <strong>{docs.length}</strong>
+              <Link to="/documents">
+                Open your library <ArrowRight size={15} />
+              </Link>
+            </Card>
+            <Card>
+              <span>Awaiting review</span>
+              <strong>{review.length}</strong>
+              <Link to="/documents?filter=review">
+                Review extracted details <ArrowRight size={15} />
+              </Link>
+            </Card>
+            <Card>
+              <span>Confirmed documents</span>
+              <strong>{confirmed}</strong>
+              <Link to="/profile">
+                Explore your profile <ArrowRight size={15} />
+              </Link>
+            </Card>
+          </div>
+          <Card className="next-step">
+            <div>
+              <p className="eyebrow">Recommended next step</p>
+              <h2>
+                {review.length
+                  ? "Your analysis is ready to review"
+                  : docs.length
+                    ? "Explore the experience you have collected"
+                    : "Start with one document"}
+              </h2>
+              <p>
+                {review.length
+                  ? "Check the summary and select demonstrated skills before adding them to your profile."
+                  : "A project report, certificate or internship letter is a useful starting point."}
+              </p>
+            </div>
+            <Link
+              className="primary"
+              to={
+                review[0]
+                  ? `/documents/${review[0].id}`
+                  : docs.length
+                    ? "/profile"
+                    : "/documents"
+              }
+            >
+              {review.length
+                ? "Review document"
+                : docs.length
+                  ? "View profile"
+                  : "Upload document"}
+              <ArrowRight size={16} />
+            </Link>
+          </Card>
+          <div className="two-column section-gap">
+            <Card>
+              <div className="card-head">
+                <h2>Recent documents</h2>
+                <Link className="text-button" to="/documents">
+                  View all
+                </Link>
+              </div>
+              {docs.length ? (
+                docs.slice(0, 5).map((d) => (
+                  <Link
+                    to={`/documents/${d.id}`}
+                    className="record-link"
+                    key={d.id}
+                  >
+                    <FileText size={22} />
+                    <span>
+                      <b>{d.display_name}</b>
+                      <small>
+                        {new Date(d.created_at).toLocaleDateString()}
+                      </small>
+                    </span>
+                    <Status value={d.processing_status} />
+                  </Link>
+                ))
+              ) : (
+                <Empty
+                  title="Your library is empty"
+                  description="Upload your first document to begin building your profile."
+                />
+              )}
+            </Card>
+            <Card>
+              <p className="eyebrow">How your workspace connects</p>
+              <h2>From evidence to opportunity</h2>
+              <ol className="workflow">
+                <li>
+                  <b>Organize your documents</b>
+                  <p>Keep projects, certificates and other work in folders.</p>
+                </li>
+                <li>
+                  <b>Review what AI found</b>
+                  <p>
+                    Confirm accurate details. Exclude incidental skill mentions.
+                  </p>
+                </li>
+                <li>
+                  <b>Plan your next step</b>
+                  <p>
+                    Compare your profile with a role, then build a learning
+                    plan.
+                  </p>
+                </li>
+              </ol>
+              <Link className="secondary" to="/planning/roles">
+                Explore a target role <ArrowRight size={15} />
+              </Link>
+            </Card>
+          </div>
+        </>
+      )}
+    </>
+  );
 }

@@ -29,7 +29,7 @@ class ProfileOut(ProfileUpdate, ORMModel):
 
 
 class CareerRecordCreate(BaseModel):
-    record_type: Literal["project", "internship", "certification", "workshop", "achievement"]
+    record_type: Literal["project", "internship", "certification", "workshop", "achievement", "education", "other"]
     title: str = Field(min_length=1, max_length=240)
     organization: str | None = Field(default=None, max_length=240)
     description: str | None = None
@@ -195,4 +195,3 @@ class ResumeContent(BaseModel):
 class ExtractionReview(BaseModel):
     decision: Literal["accept", "reject"]
     corrected_result: dict[str, Any] | None = None
-

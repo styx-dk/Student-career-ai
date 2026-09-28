@@ -142,6 +142,7 @@ def list_plans(user: CurrentUser = Depends(get_current_user), db: Session = Depe
         {
             "id": row.id,
             "target_role": row.target_role,
+            "job_description_id": row.job_description_id,
             "current_readiness": row.current_readiness,
             "target_readiness": row.target_readiness,
             "actions": row.selected_actions,
@@ -150,4 +151,3 @@ def list_plans(user: CurrentUser = Depends(get_current_user), db: Session = Depe
         }
         for row in rows
     ]
-

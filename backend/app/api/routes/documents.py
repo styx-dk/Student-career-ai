@@ -1,5 +1,6 @@
 import uuid
 import logging
+import hashlib
 from pathlib import Path
 from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
@@ -13,7 +14,8 @@ from app.models.entities import CareerRecord, Document, DocumentExtraction, Docu
 from app.schemas.contracts import ExtractionReview
 from app.schemas.document_analysis import DocumentAnalysis
 from app.services.documents import IMAGE_EXTENSIONS, extract_text, safe_filename, validate_upload
-from app.services.llm import provider_for
+from app.services.llm import provider_for, public_ai_error
+from app.services.ai_selection import AISelection, ai_selection
 from app.services.storage import download_bytes, remove_object, signed_url, upload_bytes
 from app.api.routes.folders import owned_folder
 from app.services.career_summary import refresh_summary
@@ -48,7 +50,22 @@ def serialize(document, extraction=None):
 @router.get("")
 def list_documents(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
     documents = db.scalars(select(Document).where(Document.student_id == user.id).order_by(Document.created_at.desc())).all()
-    return [serialize(doc, latest_extraction(db, user.id, doc.id)) for doc in documents]
+    extractions = db.scalars(select(DocumentExtraction).where(DocumentExtraction.student_id == user.id)
+        .order_by(DocumentExtraction.created_at.desc(), DocumentExtraction.id.desc())).all()
+    latest = {}
+    confirmed = set()
+    for extraction in extractions:
+        latest.setdefault(extraction.document_id, extraction)
+        if extraction.is_confirmed:
+            confirmed.add(extraction.document_id)
+    return [{**serialize(doc, latest.get(doc.id)), "has_confirmed_evidence": doc.id in confirmed} for doc in documents]
+
+@router.get("/{document_id}")
+def get_document(document_id: UUID, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    doc = owned_document(db, user.id, document_id)
+    confirmed = db.scalar(select(CareerRecord.id).where(CareerRecord.student_id == user.id,
+        CareerRecord.source_document_id == doc.id, CareerRecord.evidence_state == EvidenceState.user_confirmed))
+    return {**serialize(doc, latest_extraction(db, user.id, doc.id)), "has_confirmed_evidence": confirmed is not None}
 
 @router.post("", status_code=201)
 async def upload_document(file: UploadFile = File(...), folder_id: UUID | None = Form(None),
@@ -58,8 +75,15 @@ async def upload_document(file: UploadFile = File(...), folder_id: UUID | None =
     data = await file.read(settings.max_upload_bytes + 1)
     extension = validate_upload(file.filename or "document", file.content_type or "", len(data), settings.max_upload_bytes)
     name = safe_filename(file.filename or "document")
+    # New uploads encode their exact byte digest in the private storage path.
+    # This is owner-scoped and needs no remote schema migration.
+    digest = hashlib.sha256(data).hexdigest()
+    existing = db.scalar(select(Document).where(Document.student_id == user.id,
+        Document.storage_path.like(f"%/v1/{digest}/%")))
+    if existing:
+        return {**serialize(existing, latest_extraction(db, user.id, existing.id)), "duplicate": True}
     document_id = uuid.uuid4()
-    path = f"{user.id}/{document_id}/v1/{name}"
+    path = f"{user.id}/{document_id}/v1/{digest}/{name}"
     try:
         upload_bytes(settings.supabase_document_bucket, path, data, file.content_type)
     except Exception as exc:
@@ -93,7 +117,7 @@ def update_document(document_id: UUID, payload: DocumentUpdate, user: CurrentUse
     return serialize(doc, latest_extraction(db, user.id, doc.id))
 
 @router.post("/{document_id}/process")
-def process_document(document_id: UUID, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+def process_document(document_id: UUID, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db), selection: AISelection = Depends(ai_selection)):
     document = owned_document(db, user.id, document_id)
     document.processing_status = ProcessingStatus.processing
     document.extraction_error = None
@@ -103,19 +127,19 @@ def process_document(document_id: UUID, user: CurrentUser = Depends(get_current_
         extension = Path(document.original_filename).suffix.lower()
         raw_text = None
         if extension in IMAGE_EXTENSIONS:
-            provider = provider_for("image")
+            provider = provider_for("image", selection.provider, selection.model)
             result = provider.analyze_image_document(data, document.mime_type, DocumentAnalysis)
         else:
             raw_text, scanned = extract_text(data, extension)
             if scanned and extension == ".pdf":
-                provider = provider_for("image")
+                provider = provider_for("image", selection.provider, selection.model)
                 result = provider.analyze_image_document(data, "application/pdf", DocumentAnalysis)
             else:
                 if not raw_text.strip():
                     raise ValueError("No readable text found")
                 if len(raw_text) > 50000:
                     raise ValueError("Document exceeds the 50,000-character analysis limit. Split it into smaller files.")
-                provider = provider_for("text")
+                provider = provider_for("text", selection.provider, selection.model)
                 result = provider.analyze_text_document(raw_text, DocumentAnalysis)
         extraction = DocumentExtraction(student_id=user.id, document_id=document.id,
             provider=provider.name, raw_text=raw_text, ai_result=result.model_dump(mode="json"))
@@ -124,7 +148,7 @@ def process_document(document_id: UUID, user: CurrentUser = Depends(get_current_
         db.commit()
         return serialize(document, extraction)
     except Exception as exc:
-        message = str(exc) if isinstance(exc, (ValueError, RuntimeError)) and not isinstance(exc, ValidationError) else "Analysis failed. Check the provider connection and retry."
+        message = str(exc) if isinstance(exc, ValueError) and not isinstance(exc, ValidationError) else public_ai_error(exc)
         if settings.gemini_api_key and settings.gemini_api_key in message:
             message = "Analysis failed. Check the provider connection and retry."
         document.processing_status = ProcessingStatus.failed

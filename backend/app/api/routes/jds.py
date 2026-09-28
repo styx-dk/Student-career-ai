@@ -8,7 +8,8 @@ from app.core.database import get_db
 from app.core.security import CurrentUser, get_current_user
 from app.models.entities import JobDescription
 from app.schemas.contracts import JDCreate, JDOut, ReadinessResult
-from app.services.llm import provider_for
+from app.services.llm import provider_for, public_ai_error
+from app.services.ai_selection import AISelection, ai_selection
 from app.services.matching import calculate_readiness
 from app.services.profile_state import load_profile_state
 from app.services.skills import normalize_skill
@@ -63,14 +64,14 @@ async def upload_jd(
 
 
 @router.post("/{jd_id}/analyze", response_model=JDOut)
-def analyze_jd(jd_id: UUID, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+def analyze_jd(jd_id: UUID, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db), selection: AISelection = Depends(ai_selection)):
     jd = db.scalar(select(JobDescription).where(JobDescription.id == jd_id, JobDescription.student_id == user.id))
     if not jd:
         raise HTTPException(404, "Job description not found")
     try:
-        result = provider_for("text").analyze_jd(jd.raw_text)
+        result = provider_for("text", selection.provider, selection.model).analyze_jd(jd.raw_text)
     except Exception as exc:
-        raise HTTPException(503, f"JD analysis provider unavailable: {exc}") from exc
+        raise HTTPException(503, public_ai_error(exc)) from None
     jd.analysis = result.model_dump(mode="json")
     jd.job_title = result.job_title or jd.job_title
     jd.company = result.company or jd.company

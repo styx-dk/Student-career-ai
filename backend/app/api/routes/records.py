@@ -9,6 +9,7 @@ from app.core.security import CurrentUser, get_current_user
 from app.models.entities import CareerRecord, EvidenceState, Skill, StudentSkill
 from app.schemas.contracts import CareerRecordCreate, CareerRecordOut, SkillInput
 from app.services.skills import normalize_skill
+from app.services.career_summary import refresh_summary
 
 
 router = APIRouter()
@@ -79,6 +80,8 @@ def update_record(
     for field, value in payload.model_dump().items():
         setattr(record, field, value)
     _upsert_skills(db, user.id, payload.skills, record.evidence_state)
+    db.flush()
+    refresh_summary(db, user.id)
     db.commit()
     db.refresh(record)
     return record
@@ -96,6 +99,8 @@ def delete_record(
     if not record:
         raise HTTPException(404, "Record not found")
     db.delete(record)
+    db.flush()
+    refresh_summary(db, user.id)
     db.commit()
     return Response(status_code=204)
 
@@ -140,8 +145,12 @@ def add_skill(
 
 def _upsert_skills(db: Session, student_id: UUID, names: list[str], state: EvidenceState):
     result = []
+    seen = set()
     for name in names:
         normalized = normalize_skill(name)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
         skill = db.scalar(select(Skill).where(Skill.normalized_name == normalized))
         if not skill:
             skill = Skill(name=name.strip(), normalized_name=normalized)

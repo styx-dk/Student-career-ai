@@ -1,10 +1,11 @@
 from fastapi import APIRouter
-from app.api.routes import folders
+from app.api.routes import folders, ai
 
 from app.api.routes import actions, diagnostics, documents, forecasts, jds, profile, records, resumes
 
 
 api_router = APIRouter()
+api_router.include_router(ai.router, prefix="/ai", tags=["AI settings"])
 api_router.include_router(folders.router, prefix="/folders", tags=["folders"])
 api_router.include_router(profile.router, prefix="/profile", tags=["profile"])
 api_router.include_router(records.router, prefix="/records", tags=["career repository"])

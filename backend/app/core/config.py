@@ -1,13 +1,33 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
+
+
+class AISettings(BaseSettings):
+    """Read fresh for each AI operation; other server settings remain startup-only."""
+    model_config = SettingsConfigDict(env_file=ROOT_ENV, env_file_encoding="utf-8", extra="ignore")
+    llm_provider: Literal["ollama", "gemini"] = "ollama"
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "qwen2.5:3b"
+    gemini_api_key: str = Field(default="", repr=False)
+    gemini_model: str = ""
+
+
+def get_ai_settings() -> AISettings:
+    try:
+        return AISettings()
+    except Exception:
+        raise RuntimeError("Invalid AI configuration. Check LLM_PROVIDER and model settings in the root .env.") from None
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=("../.env", ".env"), env_file_encoding="utf-8", extra="ignore"
+        env_file=ROOT_ENV, env_file_encoding="utf-8", extra="ignore"
     )
 
     app_name: str = "Career Compass API"
@@ -29,7 +49,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:3b"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.8-flash"
+    gemini_model: str = ""
     embedding_model: str = "all-MiniLM-L6-v2"
 
     readiness_skill_weight: float = 0.55

@@ -1,23 +1,211 @@
-import type { ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
-import { AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react'
+import { useEffect, useId, useRef, type ReactNode } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  LoaderCircle,
+  X,
+  FolderOpen,
+} from "lucide-react";
 
-const pageCopy:Record<string,[string,string,string]> = {
-  '/documents':['YOUR WORK, ALL TOGETHER','My documents','A home for your projects, certificates and everything you’re proud of.'],
-  '/profile':['GET TO KNOW YOUR STRENGTHS','My career profile','See the skills and experience growing from your confirmed documents.'],
-  '/repository':['EVERY EXPERIENCE COUNTS','My achievements','Keep track of projects, internships, courses and milestones.'],
-  '/jobs':['DISCOVER WHAT’S POSSIBLE','Could this role be right for you?','Add a job description to see your strengths and what you could learn next.'],
-  '/forecast':['LOOK A LITTLE FURTHER','Explore skill trends','See how demand for a skill has changed and what the forecast suggests.'],
-  '/planner':['ONE STEP CLOSER','Plan your next move','Try out learning activities and see how they could help you prepare for a role.'],
-  '/resumes':['BRING YOUR STORY TOGETHER','Create a resume that feels like you','Use your confirmed experience to prepare a resume for your next opportunity.'],
-  '/settings':['MAKE THIS SPACE YOURS','Your account & preferences','Update your details and the direction you’d like to explore.'],
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <header className="page-header">
+      <div>
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+        <h1 title={title}>{title}</h1>
+        <p>{description}</p>
+      </div>
+      {action}
+    </header>
+  );
 }
-export function PageHeader({eyebrow,title,description,action}:{eyebrow?:string;title:string;description:string;action?:ReactNode}) {
-  const {pathname}=useLocation();const copy=pageCopy[pathname]
-  return <header className="page-header"><div><p className="eyebrow">{copy?.[0]||eyebrow}</p><h1>{copy?.[1]||title}</h1><p>{copy?.[2]||description}</p></div>{action}</header>
+export function Card({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <section className={`card ${className}`}>{children}</section>;
 }
-export function Card({children,className=''}:{children:ReactNode;className?:string}) { return <section className={`card ${className}`}>{children}</section> }
-export function Empty({title,description,action}:{title:string;description:string;action?:ReactNode}) { return <div className="empty"><div className="empty-mark">＋</div><h3>{title}</h3><p>{description}</p>{action}</div> }
-export function Spinner(){return <div className="loading"><LoaderCircle size={20}/> Loading…</div>}
-export function Status({value}:{value:string}) { const key=value.toLowerCase().replaceAll(' ','_'); return <span className={`status status-${key}`}>{value}</span> }
-export function Notice({kind='info',children}:{kind?:'info'|'error'|'success';children:ReactNode}) { const Icon=kind==='error'?AlertCircle:CheckCircle2; return <div className={`notice ${kind}`}><Icon size={18}/><span>{children}</span></div> }
+export function Empty({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="empty">
+      <FolderOpen size={28} />
+      <h2>{title}</h2>
+      <p>{description}</p>
+      {action}
+    </div>
+  );
+}
+export function Spinner() {
+  return (
+    <div className="loading" role="status">
+      <LoaderCircle size={20} /> Loading...
+    </div>
+  );
+}
+export function Status({ value }: { value: string }) {
+  return (
+    <span
+      className={`status status-${value.toLowerCase().replaceAll(" ", "_")}`}
+    >
+      {value.replaceAll("_", " ")}
+    </span>
+  );
+}
+export function Notice({
+  kind = "info",
+  children,
+}: {
+  kind?: "info" | "error" | "success";
+  children: ReactNode;
+}) {
+  const Icon = kind === "error" ? AlertCircle : CheckCircle2;
+  return (
+    <div
+      role={kind === "error" ? "alert" : "status"}
+      className={`notice ${kind}`}
+    >
+      <Icon size={18} />
+      <span>{children}</span>
+    </div>
+  );
+}
+export function Pager({
+  page,
+  total,
+  size,
+  onChange,
+}: {
+  page: number;
+  total: number;
+  size: number;
+  onChange: (page: number) => void;
+}) {
+  const pages = Math.max(1, Math.ceil(total / size));
+  const current = Math.min(page, pages);
+  return (
+    <div className="pagination">
+      <span>
+        {total
+          ? `${(current - 1) * size + 1}–${Math.min(current * size, total)} of ${total}`
+          : "0 results"}
+      </span>
+      <div>
+        <button
+          className="secondary"
+          disabled={current <= 1}
+          onClick={() => onChange(current - 1)}
+        >
+          Previous
+        </button>
+        <span>
+          Page {current} of {pages}
+        </span>
+        <button
+          className="secondary"
+          disabled={current >= pages}
+          onClick={() => onChange(current + 1)}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+export function SkillChips({
+  skills,
+  limit = 3,
+}: {
+  skills: string[];
+  limit?: number;
+}) {
+  const unique = [...new Set(skills.filter(Boolean))];
+  return (
+    <div className="chips">
+      {unique.slice(0, limit).map((s) => (
+        <span key={s}>{s}</span>
+      ))}
+      {unique.length > limit && <span>+{unique.length - limit} more</span>}
+    </div>
+  );
+}
+export function ExpandText({
+  text,
+  limit = 420,
+}: {
+  text?: string | null;
+  limit?: number;
+}) {
+  return !text ? (
+    <p>No summary available.</p>
+  ) : text.length <= limit ? (
+    <p className="prose">{text}</p>
+  ) : (
+    <details className="expand-text">
+      <summary>
+        {text.slice(0, limit)}… <span>Read full summary</span>
+      </summary>
+      <p className="prose">{text}</p>
+    </details>
+  );
+}
+export function Dialog({
+  title,
+  children,
+  onClose,
+  wide = false,
+}: {
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+  wide?: boolean;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const headingId = useId();
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    ref.current?.showModal();
+    return () => {
+      previous?.focus();
+    };
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={headingId}
+      className={`dialog ${wide ? "dialog-wide" : ""}`}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <div className="card-head">
+        <h2 id={headingId}>{title}</h2>
+        <button className="icon" aria-label="Close dialog" onClick={onClose}>
+          <X />
+        </button>
+      </div>
+      {children}
+    </dialog>
+  );
+}
