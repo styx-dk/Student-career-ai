@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -14,6 +14,26 @@ from app.services.resume_pdf import render_resume_pdf
 
 
 router = APIRouter()
+
+
+@router.delete("/{resume_id}", status_code=204)
+def delete_resume(resume_id: UUID, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    resume = db.scalar(select(Resume).where(Resume.id == resume_id, Resume.student_id == user.id))
+    if not resume:
+        raise HTTPException(404, "Resume not found")
+    versions = db.scalars(select(ResumeVersion).where(ResumeVersion.resume_id == resume.id, ResumeVersion.student_id == user.id)).all()
+    # Older versions may have stored exports; new direct downloads have no storage path.
+    from app.services.storage import remove_object
+    from app.core.config import settings
+    try:
+        for path in {v.storage_path for v in versions if v.storage_path}:
+            remove_object(settings.supabase_resume_bucket, path)
+    except Exception:
+        raise HTTPException(503, "Could not remove the stored PDF. The resume is still saved; retry deletion later.") from None
+    db.execute(delete(ResumeVersion).where(ResumeVersion.resume_id == resume.id, ResumeVersion.student_id == user.id))
+    db.delete(resume)
+    db.commit()
+    return Response(status_code=204)
 
 
 class ResumeRequest(BaseModel):

@@ -1,8 +1,8 @@
 from uuid import UUID
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Response
+from sqlalchemy import select, delete
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -14,6 +14,26 @@ from app.services.profile_state import load_profile_state
 
 
 router = APIRouter()
+
+
+@router.delete("/plans/{plan_id}", status_code=204)
+def delete_plan(plan_id: UUID, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    plan = db.scalar(select(CareerPlan).where(CareerPlan.id == plan_id, CareerPlan.student_id == user.id))
+    if not plan:
+        raise HTTPException(404, "Plan not found")
+    db.delete(plan)
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.delete("/simulations", status_code=204)
+def clear_simulations(job_description_id: UUID, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    role = db.scalar(select(JobDescription).where(JobDescription.id == job_description_id, JobDescription.student_id == user.id))
+    if not role:
+        raise HTTPException(404, "Target role not found")
+    db.execute(delete(SimulationResult).where(SimulationResult.student_id == user.id, SimulationResult.job_description_id == role.id))
+    db.commit()
+    return Response(status_code=204)
 
 
 def _candidate(row: ActionCatalog) -> CandidateAction:

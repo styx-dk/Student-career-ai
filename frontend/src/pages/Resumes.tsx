@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Download, FileText } from "lucide-react";
 import { api, apiBlob } from "../lib/api";
+import { DeleteButton } from "../components/DeleteButton";
 import type { JD } from "../types";
 import {
   Card,
@@ -21,7 +22,7 @@ type Resume = {
 };
 type ResumePreview = { name: string; content: { professional_summary: string; skills: string[]; [key: string]: unknown } };
 export function Resumes() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const previewId = params.get("preview");
   const [resumes, setResumes] = useState<Resume[]>();
   const [jds, setJds] = useState<JD[]>([]);
@@ -193,6 +194,13 @@ export function Resumes() {
                         </p>
                       </div>
                       <div className="resume-buttons">
+                      <DeleteButton label="Delete resume" title={`Delete “${r.name}”?`} description="This removes this generated resume, all its saved versions and stored PDF exports. Your uploaded documents, career profile and PDFs already downloaded to your device are kept." disabled={busy} onDelete={async () => {
+                        await api(`/resumes/${r.id}`, { method: "DELETE" });
+                        setResumes(current => current?.filter(item => item.id !== r.id));
+                        setPage(1); setDownload(""); setPreview(undefined);
+                        if (previewId === r.id) { const next = new URLSearchParams(params); next.delete("preview"); setParams(next, { replace: true }); }
+                        setNotice("Resume deleted. Your documents and profile are unchanged.");
+                      }} />
                       <button className="secondary" disabled={busy} onClick={() => void openPreview(r.id)}>Preview</button>
                       <button
                         className="secondary"

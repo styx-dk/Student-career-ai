@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Search } from "lucide-react";
 import { api } from "../lib/api";
+import { DeleteButton } from "../components/DeleteButton";
 import type { JD, Match } from "../types";
 import {
   Card,
@@ -39,6 +40,7 @@ export function Jobs() {
         r.find((j) => j.id === sessionStorage.getItem("career-target-role")) ||
         r[0];
       if (saved) pick(saved);
+      else { setSelected(undefined); setMatch(undefined); sessionStorage.removeItem("career-target-role"); }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load roles");
     }
@@ -140,6 +142,13 @@ export function Jobs() {
                   <p className="prose">{selected.raw_text}</p>
                 </details>
                 <div className="button-row">
+                  <DeleteButton label="Delete target role" title={`Delete “${selected.job_title || selected.name}”?`} description="This deletes the role, its analysis, saved action plans and what-if history. Generated resumes are kept and unlinked from this role. Your documents and profile are unchanged." disabled={!!busy} onDelete={async () => {
+                    await api(`/job-descriptions/${selected.id}`, { method: "DELETE" });
+                    const remaining = jds.filter(item => item.id !== selected.id);
+                    setJds(remaining); setMatch(undefined);
+                    if (remaining[0]) pick(remaining[0]);
+                    else { setSelected(undefined); sessionStorage.removeItem("career-target-role"); }
+                  }} />
                   <button
                     className="secondary"
                     disabled={!!busy}

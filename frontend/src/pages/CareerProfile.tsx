@@ -551,12 +551,15 @@ export function CareerProfile() {
             <SkillChips skills={detail.skills} limit={detail.skills.length} />
           </details>
           {detail.source_document_id ? (
+            <div className="button-row">
             <Link
               className="primary section-gap"
               to={`/documents/${detail.source_document_id}`}
             >
               Review source & edit details
             </Link>
+            <button className="secondary danger" onClick={() => { setDeleteEntry(detail); setDetail(undefined); }}>Delete entry</button>
+            </div>
           ) : (
             <>
               <p className="helper">
@@ -604,6 +607,7 @@ export function CareerProfile() {
           }}
         >
           <p>This removes “{deleteEntry.title}”. It cannot be undone.</p>
+          {deleteEntry.source_document_id && <p>The original document and saved resume snapshots are kept. Confirming this document again can restore the extracted entry; exclude it in the document review if you want it omitted from future confirmations.</p>}
           {error && <Notice kind="error">{error}</Notice>}
           <div className="button-row">
             <button

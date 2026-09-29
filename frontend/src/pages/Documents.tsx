@@ -18,6 +18,7 @@ import {
 import { api } from "../lib/api";
 import type { DocumentItem } from "../types";
 import { ResumeEntries, type ResumeEntry } from "../components/ResumeEntries";
+import { DeleteButton } from "../components/DeleteButton";
 import {
   Card,
   Dialog,
@@ -910,6 +911,13 @@ export function Documents() {
         </div>
       </div>
       <Card>
+        {folder && folders.some(f => f.id === folder) && <div className="button-row"><DeleteButton label="Delete folder" title={`Delete “${folders.find(f => f.id === folder)?.name}”?`} description="Only empty folders can be deleted. Move or delete the documents and subfolders inside first; this will not recursively delete your files." disabled={!!busy} onDelete={async () => {
+          const parent = folders.find(f => f.id === folder)?.parent_id;
+          await api(`/folders/${folder}`, { method: "DELETE" });
+          setFolders(current => current.filter(f => f.id !== folder));
+          navigate(parent ? `/documents?folder=${parent}` : "/documents");
+          setMessage("Empty folder deleted.");
+        }} /></div>}
         <div className="card-head">
           <nav className="breadcrumbs" aria-label="Folder path">
             <Link to="/documents" onClick={() => setSearch("")}>

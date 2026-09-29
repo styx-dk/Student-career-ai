@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, Search } from "lucide-react";
 import { api } from "../lib/api";
+import { DeleteButton } from "../components/DeleteButton";
 import type { Action, JD } from "../types";
 import {
   Card,
@@ -149,6 +150,10 @@ export function Planner() {
             These are hypothetical outcomes, not completed achievements or a
             prediction of hiring success. Your actual profile is unchanged.
           </Notice>
+          <div className="button-row section-gap"><DeleteButton label="Clear what-if history" title="Clear what-if history for this role?" description="All saved simulation results for the selected role will be removed. Your saved plans and actual profile are kept." disabled={busy || !jd} onDelete={async () => {
+            await api(`/career/simulations?job_description_id=${encodeURIComponent(jd)}`, { method: "DELETE" });
+            setSim(undefined);
+          }} /></div>
           <Card>
             <div className="planner-controls">
               <label>
@@ -379,8 +384,8 @@ export function Planner() {
             <Card className="section-gap">
               <h2>Saved plans for this role</h2>
               {saved.slice((planPage - 1) * 5, planPage * 5).map((p) => (
+                <div key={p.id} className="freshness-row">
                 <button
-                  key={p.id}
                   className="record-link"
                   onClick={() => setPlan(p)}
                 >
@@ -396,6 +401,13 @@ export function Planner() {
                   </span>
                   <span>View plan →</span>
                 </button>
+                <DeleteButton label="Delete plan" title={`Delete plan for “${p.target_role || "this role"}”?`} description="This removes only this saved plan. The target role, other plans and your actual profile are kept." disabled={busy} onDelete={async () => {
+                  await api(`/career/plans/${p.id}`, { method: "DELETE" });
+                  setPlans(current => current.filter(item => item.id !== p.id));
+                  if (plan?.id === p.id) setPlan(undefined);
+                  setPlanPage(1);
+                }} />
+                </div>
               ))}
               <Pager
                 page={planPage}

@@ -46,3 +46,23 @@ offers a local download. It no longer requires the generated-resumes storage buc
 Restart an older running backend before testing. Upload storage is still needed
 for original student documents. A backend connectivity/CORS problem can still
 prevent downloads; the app now explains this rather than only showing Failed to fetch.
+
+## Delete controls
+
+- Generated resumes: delete the snapshot and its versions from Resumes. Original
+  documents and career entries are kept; previously downloaded local PDFs cannot
+  be removed by the app.
+- Target roles: delete from Career planning → Roles. Related saved plans and
+  simulations are deleted; generated resumes are retained with the role link cleared.
+- Saved plans: delete each plan from the saved-plan list. Clear what-if history
+  removes only simulations for the selected role.
+- Folders: open a folder to delete it. It must be empty; move or delete its contents first.
+- Documents: use Delete document in the document detail screen. Its linked career
+  entries are removed as described in the existing confirmation.
+- Profile entries: open an entry to delete it. For document-backed entries, the
+  source upload is kept, and reconfirming the source can restore the entry. Exclude
+  it in the document review to omit it from subsequent confirmations.
+
+Deletions require confirmation and owner-scoped API checks. They are permanent,
+not a trash/recovery workflow. Shared market data and the learning catalog are
+not student-owned items and do not get student delete controls.

@@ -32,6 +32,53 @@ test("AI selection persists, tests the selected model, and can return to env def
 });
 
 // All fixtures are isolated browser data. No request reaches a real user account.
+test("delete controls confirm, cancel, and remove only selected items", async ({ page }) => {
+  await setup(page);
+  const deleted: string[] = [];
+  await page.route("**/api/v1/resumes", route => route.fulfill({ json: [{ id: "resume-1", name: "Disposable resume", current_version: 1, created_at: "2026-09-29" }] }));
+  await page.route("**/api/v1/resumes/resume-1", route => { deleted.push("resume"); return route.fulfill({ status: 204 }); });
+  await page.goto("/resumes");
+  await page.getByRole("button", { name: "Delete resume", exact: true }).click();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(deleted).toEqual([]);
+  await page.getByRole("button", { name: "Delete resume", exact: true }).click();
+  await page.getByRole("button", { name: "Delete permanently", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "No resumes yet" })).toBeVisible();
+  const role = { id: "role-1", name: "Disposable role", raw_text: "Example role", requirements: [{ skill: "python", importance: "required", weight: 2 }] };
+  await page.route("**/api/v1/job-descriptions", route => route.fulfill({ json: [role] }));
+  await page.route("**/api/v1/job-descriptions/role-1", route => { deleted.push("role"); return route.fulfill({ status: 204 }); });
+  await page.goto("/planning/roles");
+  await page.getByRole("button", { name: "Delete target role" }).click();
+  await expect(page.getByRole("dialog")).toContainText("Generated resumes are kept");
+  await page.getByRole("button", { name: "Delete permanently" }).click();
+  await expect(page.getByRole("heading", { name: "What role would you like to explore?" })).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem("career-target-role"))).toBeNull();
+  await page.route("**/api/v1/career/plans", route => route.fulfill({ json: [{ id: "plan-1", job_description_id: "role-1", target_role: "Disposable role", current_readiness: 10, target_readiness: 80, actions: [], remaining_gaps: [] }] }));
+  await page.route("**/api/v1/career/plans/plan-1", route => { deleted.push("plan"); return route.fulfill({ status: 204 }); });
+  await page.route("**/api/v1/career/simulations?*", route => { deleted.push("simulations"); return route.fulfill({ status: 204 }); });
+  await page.goto("/planning/actions");
+  await page.getByRole("button", { name: "Delete plan", exact: true }).click();
+  await page.getByRole("button", { name: "Delete permanently" }).click();
+  await expect(page.getByRole("heading", { name: "Saved plans for this role" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Clear what-if history" }).click();
+  await page.getByRole("button", { name: "Delete permanently" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.route("**/api/v1/folders", route => route.fulfill({ json: [{ id: "folder-1", name: "Empty folder", parent_id: null }] }));
+  let fail = true;
+  await page.route("**/api/v1/folders/folder-1", route => {
+    if (fail) return route.fulfill({ status: 409, json: { detail: "Move or delete the folder contents first" } });
+    deleted.push("folder"); return route.fulfill({ status: 204 });
+  });
+  await page.goto("/documents?folder=folder-1");
+  await page.getByRole("button", { name: "Delete folder", exact: true }).click();
+  await page.getByRole("button", { name: "Delete permanently" }).click();
+  await expect(page.getByRole("dialog")).toContainText("Move or delete the folder contents first");
+  fail = false;
+  await page.getByRole("button", { name: "Delete permanently" }).click();
+  await expect(page).toHaveURL(/\/documents$/);
+  expect(deleted).toEqual(["resume", "role", "plan", "simulations", "folder"]);
+});
+
 test("career cockpit connects evidence and dark mode persists", async ({ page }) => {
   await setup(page);
   await page.emulateMedia({ colorScheme: "light" });

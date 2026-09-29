@@ -1,12 +1,12 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
-from sqlalchemy import select
+from sqlalchemy import select, delete, update
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import CurrentUser, get_current_user
-from app.models.entities import JobDescription
+from app.models.entities import JobDescription, CareerPlan, SimulationResult, Resume
 from app.schemas.contracts import JDCreate, JDOut, ReadinessResult
 from app.services.llm import provider_for, public_ai_error
 from app.services.ai_selection import AISelection, ai_selection
@@ -101,6 +101,10 @@ def delete_jd(jd_id: UUID, user: CurrentUser = Depends(get_current_user), db: Se
     jd = db.scalar(select(JobDescription).where(JobDescription.id == jd_id, JobDescription.student_id == user.id))
     if not jd:
         raise HTTPException(404, "Job description not found")
+    # Keep generated snapshots while removing only this owner's dependent planning data.
+    db.execute(update(Resume).where(Resume.student_id == user.id, Resume.job_description_id == jd_id).values(job_description_id=None))
+    for model in (CareerPlan, SimulationResult):
+        db.execute(delete(model).where(model.student_id == user.id, model.job_description_id == jd_id))
     db.delete(jd)
     db.commit()
     return Response(status_code=204)
