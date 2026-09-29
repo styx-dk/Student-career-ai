@@ -86,6 +86,7 @@ export function AISettings() {
             <label>
               AI provider
               <select
+                aria-label="AI provider"
                 value={provider}
                 disabled={!!busy}
                 onChange={(e) => {
@@ -112,6 +113,7 @@ export function AISettings() {
               <label>
                 Model ID
                 <input
+                  aria-label="Model ID"
                   list="available-ai-models"
                   maxLength={160}
                   value={model}

@@ -239,7 +239,7 @@ export function CareerProfile() {
                   </p>
                 )}
                 <small>
-                  AI-generated wording should be reviewed against your sources.
+                  Based on reviewed sources. Resume claims are self-reported, not independently verified. Refresh summary for AI-written wording.
                 </small>
               </Card>
               <div className="two-column section-gap">

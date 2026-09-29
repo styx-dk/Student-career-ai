@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Download, FileText } from "lucide-react";
-import { api } from "../lib/api";
+import { api, apiBlob } from "../lib/api";
 import type { JD } from "../types";
 import {
   Card,
@@ -10,6 +10,8 @@ import {
   PageHeader,
   Pager,
   Spinner,
+  Dialog,
+  SkillChips,
 } from "../components/UI";
 type Resume = {
   id: string;
@@ -17,7 +19,10 @@ type Resume = {
   current_version: number;
   created_at: string;
 };
+type ResumePreview = { name: string; content: { professional_summary: string; skills: string[]; [key: string]: unknown } };
 export function Resumes() {
+  const [params] = useSearchParams();
+  const previewId = params.get("preview");
   const [resumes, setResumes] = useState<Resume[]>();
   const [jds, setJds] = useState<JD[]>([]);
   const [confirmed, setConfirmed] = useState(0);
@@ -28,6 +33,15 @@ export function Resumes() {
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(1);
   const [download, setDownload] = useState("");
+  const [preview, setPreview] = useState<ResumePreview>();
+  async function openPreview(id: string) {
+    setBusy(true); setError("");
+    try { setPreview(await api<ResumePreview>(`/resumes/${id}`)); }
+    catch (e) { setError(e instanceof Error ? e.message : "Could not load preview"); }
+    finally { setBusy(false); }
+  }
+  useEffect(() => { if (previewId) void openPreview(previewId); }, [previewId]);
+  useEffect(() => () => { if (download) URL.revokeObjectURL(download); }, [download]);
   async function load() {
     setError("");
     try {
@@ -73,8 +87,8 @@ export function Resumes() {
     setError("");
     setDownload("");
     try {
-      const r = await api<{ url: string }>(`/resumes/${id}/pdf`);
-      setDownload(r.url);
+      const blob = await apiBlob(`/resumes/${id}/pdf`);
+      setDownload(URL.createObjectURL(blob));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not export resume");
     } finally {
@@ -101,10 +115,10 @@ export function Resumes() {
       {notice && <Notice kind="success">{notice}</Notice>}
       {download && (
         <Notice kind="success">
-          <a href={download} target="_blank" rel="noopener noreferrer">
+          <a href={download} download="career-resume.pdf">
             Open your PDF to review or download
           </a>{" "}
-          · Link expires in five minutes.
+          · Ready to download securely from this browser.
         </Notice>
       )}
       {!resumes ? (
@@ -178,6 +192,8 @@ export function Resumes() {
                           {new Date(r.created_at).toLocaleDateString()}
                         </p>
                       </div>
+                      <div className="resume-buttons">
+                      <button className="secondary" disabled={busy} onClick={() => void openPreview(r.id)}>Preview</button>
                       <button
                         className="secondary"
                         disabled={busy}
@@ -186,6 +202,7 @@ export function Resumes() {
                         <Download size={16} />
                         Export PDF
                       </button>
+                      </div>
                     </Card>
                   ))}
                 </div>
@@ -205,6 +222,15 @@ export function Resumes() {
           </div>
         </div>
       )}
+      {preview && <Dialog title={preview.name} onClose={() => setPreview(undefined)}><div className="resume-preview">
+        <Notice>Saved snapshot of reviewed information. Compare with your current <Link to="/profile">profile</Link> before sharing.</Notice>
+        <h3>Professional summary</h3><p>{preview.content.professional_summary}</p>
+        <SkillChips skills={preview.content.skills} limit={12} />
+        {["education", "projects", "internships", "certifications", "achievements", "other_experience"].map(section => {
+          const items = preview.content[section] as { id: string; title: string; description?: string }[] | undefined;
+          return !!items?.length && <section key={section}><h3>{section.replaceAll("_", " ")}</h3>{items.map(item => <article key={item.id}><b>{item.title}</b><p>{item.description}</p></article>)}</section>;
+        })}
+      </div></Dialog>}
     </>
   );
 }

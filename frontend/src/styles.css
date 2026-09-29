@@ -1589,3 +1589,16 @@ details li {
     scroll-behavior: auto !important;
   }
 }
+:root { --progress-accent: #176b50; }
+.progress-week { display: flex; gap: 12px; margin: 20px 0; flex-wrap: wrap; }
+.progress-day { display: grid; gap: 8px; text-align: center; font-size: 12px; color: var(--muted, #64748b); }
+.progress-day b { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; font-size: 20px; }
+.progress-day.done b { background: #dcfce7; color: var(--progress-accent); }
+.student-quests { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
+.student-quest { display: grid; gap: 10px; padding: 18px; border: 1px solid #dbe3ef; border-radius: 12px; text-decoration: none; }
+.student-quest:hover { background: #f0f5ff; }
+.student-quest span { font-size: 14px; line-height: 1.6; color: #52647c; }
+.resume-check { border-top: 1px solid #dbe3ef; padding: 16px 0; overflow-wrap: anywhere; }
+.resume-check summary { cursor: pointer; font-weight: 600; line-height: 1.6; }
+.resume-check li { margin: 8px 0; }
+.resume-entry-fields { border: 0; padding: 18px 0; display: grid; gap: 16px; min-width: 0; }

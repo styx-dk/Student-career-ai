@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
-from app.services.career_summary import confirmed_profile
+from fastapi import APIRouter, Depends, HTTPException, Query
+from app.services.career_summary import confirmed_profile, factual_summary, refresh_summary
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,15 +10,29 @@ from app.services.llm import provider_for, public_ai_error
 from app.services.ai_selection import AISelection, ai_selection
 from app.services.profile_state import load_profile_state
 from app.schemas.contracts import ProfileOut, ProfileUpdate
+from uuid import UUID
 
 
 router = APIRouter()
+
+@router.get("/cockpit")
+def cockpit(role_id: UUID | None = None, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.services.career_cockpit import career_cockpit
+    return career_cockpit(db, user.id, role_id)
+
+@router.get("/progress")
+def progress(offset_minutes: int = Query(0, ge=-840, le=840), user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.services.student_progress import student_progress
+    return student_progress(db, user.id, offset_minutes)
 
 @router.get("/evidence")
 def evidence_profile(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
     facts = confirmed_profile(db, user.id)
     profile = db.scalar(select(StudentProfile).where(StudentProfile.student_id == user.id))
-    return {**facts, "summary": profile.summary if profile else None}
+    summary = profile.summary if profile else None
+    if not summary or summary.startswith("Your confirmed profile includes"):
+        summary = factual_summary(facts)
+    return {**facts, "summary": summary}
 
 
 @router.get("", response_model=ProfileOut)
@@ -44,6 +58,8 @@ def update_profile(
         db.add(profile)
     for field, value in payload.model_dump().items():
         setattr(profile, field, value)
+    db.flush()
+    refresh_summary(db, user.id)
     db.commit()
     db.refresh(profile)
     return profile

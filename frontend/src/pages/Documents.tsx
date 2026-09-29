@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { api } from "../lib/api";
 import type { DocumentItem } from "../types";
+import { ResumeEntries, type ResumeEntry } from "../components/ResumeEntries";
 import {
   Card,
   Dialog,
@@ -41,6 +42,7 @@ type Analysis = {
   mentioned_skills: string[];
   accomplishments: string[];
   uncertainties: string[];
+  entries?: ResumeEntry[];
 };
 type FileItem = Omit<DocumentItem, "extraction" | "confirmed_result"> & {
   document_type: string;
@@ -271,6 +273,8 @@ export function Documents() {
             ? d.has_confirmed_evidence || d.is_confirmed
             : filter === "failed"
               ? d.processing_status === "failed"
+              : filter === "resume"
+                ? (d.confirmed_result?.document_type || d.extraction?.document_type || d.category) === "resume"
               : true)),
   );
   const actualPage = Math.min(
@@ -452,6 +456,7 @@ export function Documents() {
                         : "AI draft · Check for accuracy"}
                     </p>
                     <h2>What this document says</h2>
+                    {draft.document_type === "resume" && <Notice>This is a self-reported resume. Review the separate education and career entries in <button className="text-button" onClick={() => setTab("details")}>Details</button> before confirming. Entry-level skills, not the overall skill list, are added to your profile.</Notice>}
                     <label>
                       Title
                       <input
@@ -490,6 +495,7 @@ export function Documents() {
                 ) : tab === "skills" ? (
                   <Card>
                     <h2>Demonstrated skills</h2>
+                    {draft.document_type === "resume" && <Notice>This is the resume-wide inventory. Edit the skills on each <button className="text-button" onClick={() => setTab("details")}>career entry in Details</button> to change what is added to your profile.</Notice>}
                     <p>
                       Keep skills supported by your work. Edit a name or exclude
                       an incorrect extraction.
@@ -588,6 +594,7 @@ export function Documents() {
                 ) : (
                   <Card>
                     <h2>Extracted details</h2>
+                    {draft.document_type === "resume" && <ResumeEntries entries={draft.entries || []} onChange={entries => edit({ entries })} disabled={!!busy} />}
                     <div className="form-grid">
                       <label>
                         Category
@@ -599,6 +606,7 @@ export function Documents() {
                           }
                         >
                           {[
+                            "resume",
                             "project",
                             "internship",
                             "certification",
@@ -952,6 +960,7 @@ export function Documents() {
             <option value="review">Needs review</option>
             <option value="confirmed">Confirmed evidence</option>
             <option value="failed">Needs attention</option>
+            <option value="resume">Resumes</option>
           </select>
         </div>
         {loading ? (

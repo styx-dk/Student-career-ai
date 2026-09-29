@@ -12,7 +12,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request(path: string, init: RequestInit = {}): Promise<Response> {
   const { data } = await supabase.auth.getSession();
   const headers = new Headers(init.headers);
   const preference = data.session?.user.id
@@ -28,7 +28,12 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set("Content-Type", "application/json");
   if (data.session?.access_token)
     headers.set("Authorization", `Bearer ${data.session.access_token}`);
-  const response = await fetch(`${API_URL}${path}`, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, { ...init, headers });
+  } catch {
+    throw new ApiError(0, "Cannot reach the backend. Check that the API server is running and that its URL and CORS settings allow this app, then retry.");
+  }
   if (!response.ok) {
     const body = await response
       .json()
@@ -40,6 +45,18 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
         : JSON.stringify(body.detail),
     );
   }
+  return response;
+}
+
+export async function apiBlob(path: string): Promise<Blob> {
+  const response = await request(path);
+  if (!response.headers.get("content-type")?.includes("application/pdf"))
+    throw new ApiError(502, "The server did not return a PDF. Restart the backend to load the latest export endpoint.");
+  return response.blob();
+}
+
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await request(path, init);
   if (response.status === 204) return undefined as T;
   return response.json();
 }

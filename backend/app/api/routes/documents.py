@@ -144,6 +144,8 @@ def process_document(document_id: UUID, user: CurrentUser = Depends(get_current_
         extraction = DocumentExtraction(student_id=user.id, document_id=document.id,
             provider=provider.name, raw_text=raw_text, ai_result=result.model_dump(mode="json"))
         db.add(extraction)
+        if not document.category:
+            document.category = result.document_type
         document.processing_status = ProcessingStatus.needs_review
         db.commit()
         return serialize(document, extraction)
@@ -174,29 +176,41 @@ def review_extraction(document_id: UUID, payload: ExtractionReview, user: Curren
         result = DocumentAnalysis.model_validate(payload.corrected_result if payload.corrected_result is not None else extraction.ai_result)
     except ValidationError:
         raise HTTPException(422, "Please check the title, summary, dates and skill fields")
+    if result.document_type == "resume" and not result.entries:
+        raise HTTPException(422, "Review at least one career or education entry for this resume before confirming it.")
+    first_confirmation = not extraction.is_confirmed
     extraction.confirmed_result = result.model_dump(mode="json")
     extraction.is_confirmed = True
     extraction.rejected_at = None
     records = db.scalars(select(CareerRecord).where(CareerRecord.student_id == user.id, CareerRecord.source_document_id == document.id)).all()
-    record = records[0] if records else CareerRecord(id=uuid.uuid4(), student_id=user.id, source_document_id=document.id)
-    for duplicate in records[1:]:
+    entries = result.entries if result.document_type == "resume" else [result]
+    for duplicate in records[len(entries):]:
         db.delete(duplicate)
-    record.record_type = result.document_type
-    record.title = result.title
-    record.organization = result.organization
-    record.description = result.summary
-    record.start_date = result.start_date
-    record.end_date = result.end_date
-    record.skills = result.skills
-    record.metadata_json = {"accomplishments": result.accomplishments, "uncertainties": result.uncertainties}
-    record.evidence_state = EvidenceState.user_confirmed
-    db.add(record)
-    document.linked_entity_id = record.id
+    saved = []
+    for index, entry in enumerate(entries):
+        record = records[index] if index < len(records) else CareerRecord(id=uuid.uuid4(), student_id=user.id, source_document_id=document.id)
+        record.record_type = entry.document_type
+        record.title = entry.title
+        record.organization = entry.organization
+        record.description = entry.summary
+        record.start_date = entry.start_date
+        record.end_date = entry.end_date
+        record.skills = entry.skills
+        record.metadata_json = {"accomplishments": entry.accomplishments, "uncertainties": entry.uncertainties,
+                                "source_kind": result.document_type, "resume_claim": result.document_type == "resume"}
+        record.evidence_state = EvidenceState.user_confirmed
+        db.add(record)
+        saved.append(record)
+    if first_confirmation:
+        from app.models.entities import ActivityLog
+        db.add(ActivityLog(student_id=user.id, event_type="document_reviewed", entity_type="document",
+                           entity_id=document.id, message="Reviewed document evidence", metadata_json={"extraction_id": str(extraction.id)}))
+    document.linked_entity_id = saved[0].id
     document.linked_entity_type = result.document_type
     document.category = result.document_type
     document.processing_status = ProcessingStatus.completed
     db.flush(); refresh_summary(db, user.id); db.commit()
-    return {"status": "accepted", "record_id": record.id}
+    return {"status": "accepted", "record_id": saved[0].id, "record_count": len(saved)}
 
 @router.get("/{document_id}/download")
 def download_document(document_id: UUID, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):

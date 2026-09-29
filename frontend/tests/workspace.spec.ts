@@ -32,6 +32,67 @@ test("AI selection persists, tests the selected model, and can return to env def
 });
 
 // All fixtures are isolated browser data. No request reaches a real user account.
+test("career cockpit connects evidence and dark mode persists", async ({ page }) => {
+  await setup(page);
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "Career cockpit", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "python 1 source" }).click();
+  await expect(page.getByRole("link", { name: "Example Python project Reviewed document" })).toHaveAttribute("href", "/documents/doc-0");
+  await page.getByRole("button", { name: "sql Build evidence" }).click();
+  await expect(page.getByRole("heading", { name: "Your suggested mini-project" })).toBeVisible();
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  for (const width of [390, 1366]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.getByRole("heading", { name: "Role → skills → evidence" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.screenshot({ path: `test-results/cockpit-dark-${width}.png`, fullPage: true });
+  }
+  await page.getByRole("button", { name: "Switch to light mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+test("resume preview and authenticated PDF download", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/v1/resumes", route => route.fulfill({ json: [{ id: "resume-1", name: "Example snapshot", current_version: 1, created_at: "2026-09-29" }] }));
+  await page.route("**/api/v1/resumes/resume-1", route => route.fulfill({ json: { name: "Example snapshot", content: { professional_summary: "Example reviewed profile", skills: ["python"], projects: [{ id: "p1", title: "Example project", description: "Built an API" }] } } }));
+  await page.route("**/api/v1/resumes/resume-1/pdf", route => {
+    expect(route.request().headers().authorization).toContain("Bearer ");
+    return route.fulfill({ contentType: "application/pdf", body: "%PDF-1.4\nExample test PDF" });
+  });
+  await page.goto("/resumes");
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("Example reviewed profile");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Export PDF" }).click();
+  const link = page.getByRole("link", { name: "Open your PDF to review or download" });
+  await expect(link).toHaveAttribute("href", /^blob:/);
+  const event = page.waitForEvent("download");
+  await link.click();
+  expect((await event).suggestedFilename()).toBe("career-resume.pdf");
+  await page.goto("/resumes?preview=resume-1");
+  await expect(page.getByRole("dialog")).toContainText("Example reviewed profile");
+});
+
+test("student progress and resume entry review are actionable", async ({ page }) => {
+  await setup(page);
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "You moved your profile forward today." })).toBeVisible();
+  await page.getByText("Example resume · Needs review", { exact: false }).click();
+  await expect(page.getByText("Check your education dates.")).toBeVisible();
+  await page.route("**/api/v1/documents/doc-0", route => route.fulfill({ json: { ...docs[0], extraction: { ...analysis, document_type: "resume", entries: [{ ...analysis, title: "My education", document_type: "education" }, { ...analysis, title: "My project" }] } } }));
+  await page.goto("/documents/doc-0");
+  await page.getByRole("button", { name: "details", exact: true }).first().click();
+  await expect(page.getByRole("heading", { name: "Resume entries (2)" })).toBeVisible();
+  await page.getByText("My education · education", { exact: true }).click();
+  await page.getByLabel("Entry title", { exact: true }).first().fill("Updated education");
+  await page.getByRole("button", { name: "Exclude this entry" }).first().click();
+  await expect(page.getByRole("heading", { name: "Resume entries (1)" })).toBeVisible();
+});
+
 const analysis = {
   title: "Example API project",
   summary: "EXAMPLE: Built a documented API using Python and PostgreSQL.",
@@ -124,6 +185,8 @@ async function setup(page: Page, empty = false) {
       body = docs.find((d) => path === "/documents/" + d.id) || docs[0];
     else if (path === "/profile/evidence")
       body = empty ? { summary: null, skills: [], records: [] } : evidence;
+    else if (path === "/profile/cockpit") body = { roles: empty ? [] : [{ id: "role-1", name: "API developer" }], selected_role: empty ? null : "role-1", requirements: empty ? [] : [{ skill: "python", importance: "required", sources: [{ title: "Example Python project", document_id: "doc-0", record_id: "record-0", basis: "Reviewed document" }] }, { skill: "sql", importance: "required", sources: [] }], supported: empty ? 0 : 1, total: empty ? 0 : 2, resumes: [], journey: [{ label: "Collect", count: empty ? 0 : 25, detail: "documents", href: "/documents" }, { label: "Understand", count: empty ? 0 : 200, detail: "entries", href: "/profile" }, { label: "Prepare", count: empty ? 0 : 1, detail: "roles", href: "/planning/roles" }, { label: "Apply", count: 0, detail: "resumes", href: "/resumes" }] };
+    else if (path === "/profile/progress") body = { days: [{ date: "2026-09-29", completed: true }], active_days: 1, reviewed_today: true, quests: [{ title: "Review one document", detail: "Check your extracted facts.", href: "/documents/doc-0" }], resumes: [{ id: "doc-0", name: "Example resume", confirmed: false, issues: ["Check your education dates."] }] };
     else if (path === "/records") body = empty ? [] : records;
     else if (path === "/profile")
       body = {

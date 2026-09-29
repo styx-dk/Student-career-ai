@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import { ThemeToggle } from "./ThemeToggle";
 
 const navigation = [
   { to: "/dashboard", Icon: Home, label: "Overview" },
@@ -106,6 +107,7 @@ export function Layout() {
           </button>
           <span>{title}</span>
           <span className="workspace-label">Your work. Your next step.</span>
+          <ThemeToggle />
         </div>
         <div id="workspace-content" tabIndex={-1} className="page">
           <Outlet />

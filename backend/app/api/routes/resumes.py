@@ -5,14 +5,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import CurrentUser, get_current_user
 from app.models.entities import JobDescription, Resume, ResumeVersion, StudentProfile
 from app.services.profile_state import load_profile_state
 from app.services.skills import normalize_skill
 from app.services.resume_pdf import render_resume_pdf
-from app.services.storage import signed_url, upload_bytes
 
 
 router = APIRouter()
@@ -81,9 +79,24 @@ def export_pdf(resume_id: UUID, user: CurrentUser = Depends(get_current_user), d
     if not version:
         raise HTTPException(404, "Resume version not found")
     profile_data = {"full_name": profile.full_name if profile else "", "email": profile.email if profile else "", "phone": profile.phone if profile else "", "location": profile.location if profile else ""}
-    pdf = render_resume_pdf(profile_data, version.content)
-    path = f"{user.id}/{resume.id}/v{version.version_number}.pdf"
-    upload_bytes(settings.supabase_resume_bucket, path, pdf, "application/pdf")
-    version.storage_path = path
-    db.commit()
-    return {"url": signed_url(settings.supabase_resume_bucket, path), "expires_in": 300}
+    try:
+        pdf = render_resume_pdf(profile_data, version.content)
+    except Exception:
+        raise HTTPException(500, "Could not render this resume. Your saved resume is unchanged.") from None
+    return Response(content=pdf, media_type="application/pdf", headers={
+        "Content-Disposition": f'attachment; filename="resume-{resume.id}.pdf"',
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+    })
+
+
+@router.get("/{resume_id}")
+def preview_resume(resume_id: UUID, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    resume = db.scalar(select(Resume).where(Resume.id == resume_id, Resume.student_id == user.id))
+    if not resume:
+        raise HTTPException(404, "Resume not found")
+    version = db.scalar(select(ResumeVersion).where(ResumeVersion.resume_id == resume.id,
+        ResumeVersion.student_id == user.id, ResumeVersion.version_number == resume.current_version))
+    if not version:
+        raise HTTPException(404, "Resume version not found")
+    return {"id": resume.id, "name": resume.name, "content": version.content, "claim_sources": version.claim_sources}

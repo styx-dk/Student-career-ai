@@ -3,6 +3,8 @@ import { ArrowRight, FileText, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import type { DocumentItem } from "../types";
+import { StudentProgress } from "../components/StudentProgress";
+import { CareerCockpit } from "../components/CareerCockpit";
 import {
   Card,
   Empty,
@@ -27,7 +29,6 @@ export function Dashboard() {
   }, []);
   const review =
     docs?.filter((d) => d.processing_status === "needs_review") || [];
-  const confirmed = docs?.filter((d) => d.is_confirmed).length || 0;
   return (
     <>
       <PageHeader
@@ -53,29 +54,8 @@ export function Dashboard() {
         !error && <Spinner />
       ) : (
         <>
-          <div className="metric-grid">
-            <Card>
-              <span>Documents</span>
-              <strong>{docs.length}</strong>
-              <Link to="/documents">
-                Open your library <ArrowRight size={15} />
-              </Link>
-            </Card>
-            <Card>
-              <span>Awaiting review</span>
-              <strong>{review.length}</strong>
-              <Link to="/documents?filter=review">
-                Review extracted details <ArrowRight size={15} />
-              </Link>
-            </Card>
-            <Card>
-              <span>Confirmed documents</span>
-              <strong>{confirmed}</strong>
-              <Link to="/profile">
-                Explore your profile <ArrowRight size={15} />
-              </Link>
-            </Card>
-          </div>
+          <CareerCockpit />
+          <StudentProgress />
           <Card className="next-step">
             <div>
               <p className="eyebrow">Recommended next step</p>

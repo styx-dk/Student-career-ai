@@ -39,7 +39,13 @@ class LLMProvider(ABC):
 
     def analyze_text_document(self, text: str, schema: type[SchemaT]) -> SchemaT:
         return self.generate_structured(
-            f"{SYSTEM_GUARDRAIL}\nExtract the document into the requested schema.\nDOCUMENT:\n{text[:50000]}",
+            f"{SYSTEM_GUARDRAIL}\nExtract the document into the requested schema. "
+            "Recognize resumes as resume documents. Split their education, projects, internships and credentials into entries. "
+            "A resume is self-reported, not proof of employment or proficiency. Never classify a whole resume as a project. "
+            "Explain what the student actually did, their contribution and stated outcomes. Generic teaching material does not prove "
+            "the student performed the work. Record missing attribution and dates in uncertainties. "
+            "Do not invent a day or month for year-only dates; leave the date null and preserve the year in the summary. "
+            f"\nDOCUMENT:\n{text[:50000]}",
             schema,
         )
 
@@ -139,7 +145,7 @@ class GeminiProvider(LLMProvider):
 
     def analyze_image_document(self, data: bytes, mime_type: str, schema: type[SchemaT]) -> SchemaT:
         parts = [
-            {"text": f"{SYSTEM_GUARDRAIL}\nExtract this image document into the requested schema."},
+            {"text": f"{SYSTEM_GUARDRAIL}\nExtract this image document into the requested schema. Recognize resumes as resume documents and split education and career history into separate entries. Resume claims are self-reported. Do not invent exact dates from year-only dates; preserve the year in the summary."},
             {"inlineData": {"mimeType": mime_type, "data": base64.b64encode(data).decode()}},
         ]
         return schema.model_validate_json(self._request(parts, schema))
