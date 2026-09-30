@@ -22,6 +22,13 @@ type EvidenceProfile = {
   summary: string | null;
   skills: Skill[];
   records: unknown[];
+  insights?: {
+    strengths: { skill: string; source_count: number; contexts: string[]; confidence: string; basis: string }[];
+    portfolio_health: { reviewed_entries: number; documented_skills: number; dated_entries: number; multi_source_skills: number; resume_claim_entries: number };
+    limitations: { code: string; text: string; href: string }[];
+    alignment: null | { role_id: string; role_name: string; score: number; supported: { skill: string }[]; gaps: { skill: string; evidence_expectation: string }[]; general_competencies: string[]; disclaimer: string };
+    next_steps: { code: string; text: string; href: string }[];
+  };
 };
 const tabs = ["overview", "skills", "experience", "education", "timeline"];
 const types = [
@@ -64,7 +71,7 @@ export function CareerProfile() {
     try {
       setError("");
       const [e, r] = await Promise.all([
-        api<EvidenceProfile>("/profile/evidence"),
+        api<EvidenceProfile>(`/profile/evidence${sessionStorage.getItem("career-target-role") ? `?role_id=${encodeURIComponent(sessionStorage.getItem("career-target-role")!)}` : ""}`),
         api<CareerRecord[]>("/records"),
       ]);
       setData(e);
@@ -201,7 +208,7 @@ export function CareerProfile() {
                   <small>From confirmed information</small>
                 </Card>
                 <Card>
-                  <span>Confirmed experience</span>
+                  <span>Reviewed career entries</span>
                   <strong>{data.records.length}</strong>
                   <small>Reviewed by you, not externally verified</small>
                 </Card>
@@ -216,11 +223,11 @@ export function CareerProfile() {
                   <small>Separate from document evidence</small>
                 </Card>
               </div>
-              <Card>
+              <Card className="profile-narrative">
                 <div className="card-head">
                   <div>
                     <p className="eyebrow">At a glance</p>
-                    <h2>Your profile summary</h2>
+                    <h2>Your evidence-based story</h2>
                   </div>
                   <button
                     className="secondary"
@@ -231,7 +238,7 @@ export function CareerProfile() {
                   </button>
                 </div>
                 {data.summary ? (
-                  <ExpandText text={data.summary} limit={650} />
+                  <ExpandText text={data.summary} limit={1000} />
                 ) : (
                   <p>
                     Confirm the analysis of a document to build an
@@ -242,6 +249,36 @@ export function CareerProfile() {
                   Based on reviewed sources. Resume claims are self-reported, not independently verified. Refresh summary for AI-written wording.
                 </small>
               </Card>
+              {data.insights && <div className="profile-intelligence section-gap">
+                <Card>
+                  <p className="eyebrow">What your evidence supports</p>
+                  <h2>Strongest documented themes</h2>
+                  {data.insights.strengths.length ? <div className="strength-list">{data.insights.strengths.slice(0, 6).map(item => <button key={item.skill} onClick={() => { const found = data.skills.find(s => s.name === item.skill); if (found) setSkill(found); }}>
+                    <b>{item.skill}</b><span>{item.basis} · {item.confidence} · {item.contexts.join(", ")}</span>
+                  </button>)}</div> : <p>Review a document to establish source-linked strengths.</p>}
+                  <p className="helper">Themes describe available evidence, not an inferred proficiency level.</p>
+                </Card>
+                <Card>
+                  <p className="eyebrow">Portfolio health</p>
+                  <h2>Where the profile is reliable—and thin</h2>
+                  <div className="health-grid">
+                    <span><b>{data.insights.portfolio_health.dated_entries}</b> dated entries</span>
+                    <span><b>{data.insights.portfolio_health.multi_source_skills}</b> skills with repeated evidence</span>
+                    <span><b>{data.insights.portfolio_health.resume_claim_entries}</b> resume-claim entries</span>
+                  </div>
+                  {data.insights.limitations.map(item => <Link className="insight-row" key={item.code} to={item.href}>{item.text}<ArrowUpRight size={15} /></Link>)}
+                  {!data.insights.limitations.length && <p>No structural gaps were flagged. Continue checking every claim against its source.</p>}
+                </Card>
+              </div>}
+              {data.insights?.alignment && <Card className="section-gap target-connection">
+                <div className="card-head"><div><p className="eyebrow">Connected target role</p><h2>{data.insights.alignment.role_name}</h2></div><Link className="secondary" to="/planning/roles">Open full role analysis</Link></div>
+                <p><b>{data.insights.alignment.supported.length}</b> {data.insights.alignment.supported.length === 1 ? "requirement has" : "requirements have"} related reviewed evidence; <b>{data.insights.alignment.gaps.length}</b> still {data.insights.alignment.gaps.length === 1 ? "needs" : "need"} evidence. This is portfolio coverage, not hiring readiness.</p>
+                <div className="two-column">
+                  <div><h3>Supported</h3><SkillChips skills={data.insights.alignment.supported.map(item => item.skill)} limit={8} /></div>
+                  <div><h3>Priority gaps</h3>{data.insights.alignment.gaps.slice(0, 4).map(item => <div className="insight-row" key={item.skill}><span><b>{item.skill}</b><small>{item.evidence_expectation}</small></span></div>)}</div>
+                </div>
+              </Card>}
+              {!!data.insights?.next_steps.length && <Card className="section-gap"><p className="eyebrow">Recommended sequence</p><h2>Your next three useful moves</h2><ol className="connected-steps">{data.insights.next_steps.map((item, index) => <li key={item.code}><span>{index + 1}</span><Link to={item.href}>{item.text}<ArrowUpRight size={15} /></Link></li>)}</ol></Card>}
               <div className="two-column section-gap">
                 <Card>
                   <div className="card-head">

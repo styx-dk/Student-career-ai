@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from app.services.career_summary import confirmed_profile, factual_summary, refresh_summary
+from app.services.career_summary import confirmed_profile, factual_summary, refresh_summary, profile_insights
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -26,13 +26,13 @@ def progress(offset_minutes: int = Query(0, ge=-840, le=840), user: CurrentUser 
     return student_progress(db, user.id, offset_minutes)
 
 @router.get("/evidence")
-def evidence_profile(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+def evidence_profile(role_id: UUID | None = None, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
     facts = confirmed_profile(db, user.id)
     profile = db.scalar(select(StudentProfile).where(StudentProfile.student_id == user.id))
     summary = profile.summary if profile else None
-    if not summary or summary.startswith("Your confirmed profile includes"):
+    if not summary or summary.startswith("Your confirmed profile includes") or "Based on information you reviewed" in summary:
         summary = factual_summary(facts)
-    return {**facts, "summary": summary}
+    return {**facts, "summary": summary, "insights": profile_insights(db, user.id, role_id)}
 
 
 @router.get("", response_model=ProfileOut)

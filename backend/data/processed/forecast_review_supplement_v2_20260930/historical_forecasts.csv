@@ -1,0 +1,31 @@
+domain,skill,forecast_month,predicted_rate,lower_bound,upper_bound,model_name,training_start,training_end,scope,beats_naive_holdout
+Data Analytics,python,2024-01-01,0.3176470588235294,0.12326764186297604,0.5120264757840828,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,python,2024-02-01,0.3176470588235294,0.04275305111173999,0.5925410665353188,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,python,2024-03-01,0.3176470588235294,0.0,0.6543220849448234,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,python,2024-04-01,0.3176470588235294,0.0,0.7064058927446362,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,python,2024-05-01,0.3176470588235294,0.0,0.7522926485741023,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,python,2024-06-01,0.3176470588235294,0.0,0.7937774468765793,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,tableau,2024-01-01,0.32941176470588235,0.22023613637854406,0.43858739303322064,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,tableau,2024-02-01,0.32941176470588235,0.17501411044475626,0.48380941896700846,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,tableau,2024-03-01,0.32941176470588235,0.14031402949467647,0.5185094999170883,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,tableau,2024-04-01,0.32941176470588235,0.11106050805120576,0.5477630213605589,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,tableau,2024-05-01,0.32941176470588235,0.08528763827970226,0.5735358911320625,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,tableau,2024-06-01,0.32941176470588235,0.061987182956158626,0.5968363464556061,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,azure,2024-01-01,0.047058823529411764,0.0,0.12832117487982778,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,azure,2024-02-01,0.047058823529411764,0.0,0.1619811429194977,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,azure,2024-03-01,0.047058823529411764,0.0,0.18780934481084566,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,azure,2024-04-01,0.047058823529411764,0.0,0.2095835262302438,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,azure,2024-05-01,0.047058823529411764,0.0,0.2287669651604138,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,azure,2024-06-01,0.047058823529411764,0.0,0.24611011963669852,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,machine learning,2024-01-01,0.011764705882352941,0.0,0.09207056571441229,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,machine learning,2024-02-01,0.011764705882352941,0.0,0.12533434199488402,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,machine learning,2024-03-01,0.011764705882352941,0.0,0.1508585352569844,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,machine learning,2024-04-01,0.011764705882352941,0.0,0.17237642554647165,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,machine learning,2024-05-01,0.011764705882352941,0.0,0.19133406745840748,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,machine learning,2024-06-01,0.011764705882352941,0.0,0.20847308582636592,LastValueBaseline,2022-10-01,2023-12-01,historical_experiment,False
+Data Analytics,java,2024-01-01,0.013843960918220696,0.0,0.05321403702358183,LinearTrend,2022-10-01,2023-12-01,historical_experiment,True
+Data Analytics,java,2024-02-01,0.011972780920968276,0.0,0.05255452648872076,LinearTrend,2022-10-01,2023-12-01,historical_experiment,True
+Data Analytics,java,2024-03-01,0.010101600923715856,0.0,0.051859872608612835,LinearTrend,2022-10-01,2023-12-01,historical_experiment,True
+Data Analytics,java,2024-04-01,0.008230420926463436,0.0,0.05113296671215708,LinearTrend,2022-10-01,2023-12-01,historical_experiment,True
+Data Analytics,java,2024-05-01,0.006359240929211016,0.0,0.05037632415467485,LinearTrend,2022-10-01,2023-12-01,historical_experiment,True
+Data Analytics,java,2024-06-01,0.004488060931958596,0.0,0.049592149399206,LinearTrend,2022-10-01,2023-12-01,historical_experiment,True

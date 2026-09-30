@@ -5,6 +5,7 @@ No database writes. Months without observations are never imputed as zero demand
 import argparse
 import json
 import warnings
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -56,7 +57,68 @@ def model_forecast(series, horizon):
     return result, sorted({str(w.message) for w in caught})
 
 
-def run(source, output, minimum=10, horizon=6):
+@dataclass
+class SimpleForecast:
+    predicted_mean: pd.Series
+    lower: np.ndarray
+    upper: np.ndarray
+
+    def conf_int(self):
+        return pd.DataFrame({"lower": self.lower, "upper": self.upper}, index=self.predicted_mean.index)
+
+
+def linear_forecast(series, horizon):
+    """Small-sample exploratory fallback with residual-based prediction bounds."""
+    values = np.asarray(series, dtype=float)
+    x = np.arange(len(values), dtype=float)
+    slope, intercept = np.polyfit(x, values, 1)
+    fitted = intercept + slope * x
+    residual = float(np.std(values - fitted, ddof=2)) if len(values) > 2 else 0.0
+    future_x = np.arange(len(values), len(values) + horizon, dtype=float)
+    predicted = intercept + slope * future_x
+    # Widen bounds with horizon; these are exploratory intervals, not calibrated probabilities.
+    spread = 1.96 * residual * np.sqrt(1 + np.arange(1, horizon + 1) / max(len(values), 1))
+    index = pd.date_range(series.index[-1] + pd.offsets.MonthBegin(), periods=horizon, freq="MS")
+    return SimpleForecast(pd.Series(predicted, index=index), predicted - spread, predicted + spread), []
+
+
+def last_value_forecast(series, horizon):
+    values = np.asarray(series, dtype=float)
+    predicted = np.repeat(values[-1], horizon)
+    residual = float(np.std(np.diff(values), ddof=1)) if len(values) > 2 else 0.0
+    spread = 1.96 * residual * np.sqrt(np.arange(1, horizon + 1))
+    index = pd.date_range(series.index[-1] + pd.offsets.MonthBegin(), periods=horizon, freq="MS")
+    return SimpleForecast(pd.Series(predicted, index=index), predicted - spread, predicted + spread), []
+
+
+def evaluated_forecast(series, horizon):
+    """Choose ARIMA, linear trend, or a conservative baseline on a holdout."""
+    train, actual = series.iloc[:-3], series.iloc[-3:].to_numpy()
+    candidates = []
+    try:
+        result, warnings_found = model_forecast(train, 3)
+        candidates.append((float(np.abs(actual - np.asarray(result.predicted_mean)).mean()), "ARIMA(1,1,1)", warnings_found, result))
+    except (ValueError, np.linalg.LinAlgError) as exc:
+        candidates.append((float("inf"), "ARIMA(1,1,1)", [str(exc)], None))
+    linear, linear_warnings = linear_forecast(train, 3)
+    candidates.append((float(np.abs(actual - np.asarray(linear.predicted_mean)).mean()), "LinearTrend", linear_warnings, linear))
+    baseline, baseline_warnings = last_value_forecast(train, 3)
+    candidates.append((float(np.abs(actual - np.asarray(baseline.predicted_mean)).mean()), "LastValueBaseline", baseline_warnings, baseline))
+    mae, model_name, evaluation_warnings, heldout = min(candidates, key=lambda item: item[0])
+    if model_name == "ARIMA(1,1,1)":
+        try:
+            future, final_warnings = model_forecast(series, horizon)
+        except (ValueError, np.linalg.LinAlgError) as exc:
+            model_name = "LinearTrend"
+            future, final_warnings = linear_forecast(series, horizon)
+            evaluation_warnings.append(f"Full-series ARIMA failed; used linear fallback: {exc}")
+    else:
+        future, final_warnings = (linear_forecast(series, horizon) if model_name == "LinearTrend" else last_value_forecast(series, horizon))
+    predicted = np.clip(np.asarray(heldout.predicted_mean), 0, 1)
+    return future, model_name, actual, predicted, sorted(set(evaluation_warnings + final_warnings))
+
+
+def run(source, output, minimum=10, horizon=6, only_skills=None):
     output.mkdir(parents=True, exist_ok=False)
     frame = pd.read_csv(source)
     required = {"posting_date", "job_title", "job_description", "domain", "required_skills"}
@@ -78,6 +140,7 @@ def run(source, output, minimum=10, horizon=6):
             "Dataset sampling is uneven and cannot be assumed representative of the whole job market.",
             "Predictions start after the selected historical block, not after today's date.",
             "Ten postings per month is an exploratory screening threshold, not a reliability guarantee.",
+            "ARIMA and linear trend are compared on one three-month holdout; model selection may overfit that short period.",
         ],
         "domains": [], "skipped": [],
     }
@@ -103,6 +166,8 @@ def run(source, output, minimum=10, horizon=6):
         training = selected[selected.month < block[-3]]
         mentions = training.explode("skills").dropna(subset=["skills"]).groupby("skills").size()
         names = mentions[mentions >= 10].sort_values(ascending=False).head(12).index
+        if only_skills:
+            names = [name for name in names if name in only_skills]
         denominator = counts.reindex(block)
         for skill in names:
             hits = selected[selected.skills.map(lambda s: skill in s)].groupby("month").size().reindex(block, fill_value=0)
@@ -112,26 +177,24 @@ def run(source, output, minimum=10, horizon=6):
                     "job_count": int(hits.loc[month]), "total_jobs": int(denominator.loc[month]),
                     "demand_rate": float(series.loc[month])})
             try:
-                heldout, warning_a = model_forecast(series.iloc[:-3], 3)
-                predicted = np.clip(np.asarray(heldout.predicted_mean), 0, 1)
-                actual = series.iloc[-3:].to_numpy()
+                future, model_name, actual, predicted, model_warnings = evaluated_forecast(series, horizon)
                 naive = np.repeat(series.iloc[-4], 3)
                 mae = float(np.abs(actual - predicted).mean())
                 naive_mae = float(np.abs(actual - naive).mean())
-                future, warning_b = model_forecast(series, horizon)
                 evaluation_rows.append({"domain": domain, "skill": skill, "mae": mae,
                     "rmse": float(np.sqrt(np.mean((actual - predicted) ** 2))),
                     "naive_mae": naive_mae, "beats_naive": mae < naive_mae,
+                    "selected_model": model_name, "selection_method": "lowest MAE on one three-month holdout, including last-value baseline",
                     "test_start": str(block[-3].date()), "test_end": str(block[-1].date()),
                     "actual": actual.tolist(), "predicted": predicted.tolist(),
-                    "warnings": sorted(set(warning_a + warning_b))})
+                    "warnings": model_warnings})
                 confidence = future.conf_int().to_numpy()
                 for i, (month, value) in enumerate(future.predicted_mean.items()):
                     forecast_rows.append({"domain": domain, "skill": skill, "forecast_month": month,
                         "predicted_rate": float(np.clip(value, 0, 1)),
                         "lower_bound": float(np.clip(confidence[i, 0], 0, 1)),
                         "upper_bound": float(np.clip(confidence[i, 1], 0, 1)),
-                        "model_name": "ARIMA(1,1,1)", "training_start": block[0],
+                        "model_name": model_name, "training_start": block[0],
                         "training_end": block[-1], "scope": "historical_experiment",
                         "beats_naive_holdout": mae < naive_mae})
             except (ValueError, np.linalg.LinAlgError) as exc:
@@ -153,7 +216,8 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", type=Path, required=True, help="New directory; existing output is never overwritten")
     parser.add_argument("--min-postings", type=int, default=10)
     parser.add_argument("--horizon", type=int, default=6)
+    parser.add_argument("--skills", nargs="*", help="Optional normalized skills to include from the audited top-skill set")
     args = parser.parse_args()
     if args.min_postings < 1 or not 1 <= args.horizon <= 12:
         parser.error("min-postings must be positive; horizon must be 1–12")
-    run(args.source, args.output_dir, args.min_postings, args.horizon)
+    run(args.source, args.output_dir, args.min_postings, args.horizon, set(args.skills or []))

@@ -12,6 +12,7 @@ import {
   Pager,
   Spinner,
   Status,
+  SkillChips,
 } from "../components/UI";
 export function Jobs() {
   const [jds, setJds] = useState<JD[]>();
@@ -132,6 +133,7 @@ export function Jobs() {
                         selected.domain ||
                         "Analyze this description to identify its requirements."}
                     </p>
+                    <p className="helper">{selected.requirements.filter(r => r.importance === "required").length} required · {selected.requirements.filter(r => r.importance === "preferred").length} preferred · concrete requirements only</p>
                   </div>
                   <Link className="secondary" to="/planning/actions">
                     Build an action plan
@@ -164,8 +166,8 @@ export function Jobs() {
                     }
                   >
                     {selected.requirements.length
-                      ? "Refresh requirements"
-                      : "Find required skills"}
+                      ? "Reanalyze requirements precisely"
+                      : "Analyze requirements precisely"}
                   </button>
                   <button
                     className="primary"
@@ -185,6 +187,12 @@ export function Jobs() {
                   </button>
                 </div>
               </Card>
+              {!!selected.analysis?.general_competencies?.length && <Card className="section-gap">
+                <p className="eyebrow">Important, but not scored as tools</p>
+                <h2>Broader employer expectations</h2>
+                <SkillChips skills={selected.analysis.general_competencies} limit={12} />
+                <p className="helper">Communication and general working traits need behavioral examples. They are kept separate from technical evidence coverage.</p>
+              </Card>}
               {match && (
                 <>
                   <div className="score-grid section-gap">
@@ -234,6 +242,8 @@ export function Jobs() {
                           <div key={r.skill}>
                             <div>
                               <b>{r.skill}</b>
+                              <small className="requirement-meta">{r.category?.replaceAll("_", " ") || "technical"} · {r.importance}</small>
+                              {r.evidence_expectation && <span>{r.evidence_expectation}</span>}
                               {"evidence" in r && (
                                 <span>
                                   {r.evidence

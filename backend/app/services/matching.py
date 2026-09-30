@@ -23,8 +23,9 @@ def calculate_readiness(
     for req in requirements:
         skill = normalize_skill(str(req["skill"]))
         weight = float(req.get("weight", 1))
-        best_similarity = max((skill_similarity(skill, item) for item in normalized_student), default=0)
-        evidence = evidence_by_skill.get(skill, [])
+        ranked = sorted(((skill_similarity(skill, item), item) for item in normalized_student), reverse=True)
+        best_similarity, best_skill = ranked[0] if ranked else (0, "")
+        evidence = evidence_by_skill.get(best_skill, []) if best_similarity >= 0.62 else []
         if best_similarity >= 0.95:
             classification = "Strong Match"
             coverage = 1.0
@@ -44,6 +45,10 @@ def calculate_readiness(
                 similarity=round(best_similarity, 3),
                 evidence=evidence,
                 weight=weight,
+                importance=req.get("importance", "required"),
+                category=req.get("category", "technical"),
+                evidence_expectation=req.get("evidence_expectation") or f"Show where you applied {skill} and what you produced.",
+                source_excerpt=req.get("source_excerpt"),
             )
         )
 
@@ -62,4 +67,3 @@ def calculate_readiness(
         evidence_coverage=round(evidence_coverage * 100, 1),
         requirements=matches,
     )
-

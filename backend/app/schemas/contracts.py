@@ -123,6 +123,14 @@ class JDRequirement(BaseModel):
     weight: float = Field(default=1.0, gt=0, le=5)
 
 
+class JDRequirementDetail(BaseModel):
+    skill: str = Field(min_length=1, max_length=120)
+    importance: Literal["required", "preferred"] = "required"
+    category: Literal["technical", "tool", "framework", "domain_knowledge", "qualification", "experience", "soft_skill"] = "technical"
+    evidence_expectation: str = Field(default="Show where you applied this requirement and what you produced.", max_length=500)
+    source_excerpt: str | None = Field(default=None, max_length=500)
+
+
 class JDAnalysis(BaseModel):
     job_title: str | None = None
     company: str | None = None
@@ -134,6 +142,8 @@ class JDAnalysis(BaseModel):
     experience_requirements: list[str] = Field(default_factory=list)
     responsibilities: list[str] = Field(default_factory=list)
     role_characteristics: list[str] = Field(default_factory=list)
+    requirements: list[JDRequirementDetail] = Field(default_factory=list, max_length=30)
+    general_competencies: list[str] = Field(default_factory=list, max_length=20)
 
 
 class JDCreate(BaseModel):
@@ -162,6 +172,10 @@ class RequirementMatch(BaseModel):
     similarity: float
     evidence: list[dict[str, Any]] = Field(default_factory=list)
     weight: float
+    importance: Literal["required", "preferred"] = "required"
+    category: str = "technical"
+    evidence_expectation: str = "Show where you applied this requirement and what you produced."
+    source_excerpt: str | None = None
 
 
 class ReadinessResult(BaseModel):

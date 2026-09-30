@@ -13,6 +13,7 @@ from app.services.ai_selection import AISelection, ai_selection
 from app.services.matching import calculate_readiness
 from app.services.profile_state import load_profile_state
 from app.services.skills import normalize_skill
+from app.services.role_requirements import clean_extracted_requirements, review_stored_requirements
 from app.services.documents import extract_text, validate_upload
 from app.core.config import settings
 from pathlib import Path
@@ -23,9 +24,18 @@ router = APIRouter()
 
 @router.get("", response_model=list[JDOut])
 def list_jds(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.scalars(
+    rows = db.scalars(
         select(JobDescription).where(JobDescription.student_id == user.id).order_by(JobDescription.created_at.desc())
     ).all()
+    result = []
+    for row in rows:
+        data = {key: getattr(row, key) for key in ("id", "name", "job_title", "company", "domain", "source", "raw_text", "created_at")}
+        requirements, excluded = review_stored_requirements(row.requirements)
+        analysis = dict(row.analysis or {})
+        analysis["general_competencies"] = list(dict.fromkeys(analysis.get("general_competencies", []) + excluded))
+        data.update({"requirements": requirements, "analysis": analysis})
+        result.append(data)
+    return result
 
 
 @router.post("", response_model=JDOut, status_code=201)
@@ -72,14 +82,13 @@ def analyze_jd(jd_id: UUID, user: CurrentUser = Depends(get_current_user), db: S
         result = provider_for("text", selection.provider, selection.model).analyze_jd(jd.raw_text)
     except Exception as exc:
         raise HTTPException(503, public_ai_error(exc)) from None
-    jd.analysis = result.model_dump(mode="json")
+    requirements, competencies = clean_extracted_requirements(result)
+    jd.analysis = {**result.model_dump(mode="json"), "general_competencies": competencies,
+                   "requirement_method": "atomic_evidence_oriented_v2"}
     jd.job_title = result.job_title or jd.job_title
     jd.company = result.company or jd.company
     jd.domain = result.domain
-    required = [{"skill": normalize_skill(s), "importance": "required", "weight": 2.0} for s in result.required_skills]
-    preferred = [{"skill": normalize_skill(s), "importance": "preferred", "weight": 1.0} for s in result.preferred_skills]
-    deduped = {item["skill"]: item for item in preferred + required}
-    jd.requirements = list(deduped.values())
+    jd.requirements = requirements
     db.commit()
     db.refresh(jd)
     return jd
@@ -92,8 +101,12 @@ def match_jd(jd_id: UUID, user: CurrentUser = Depends(get_current_user), db: Ses
         raise HTTPException(404, "Job description not found")
     if not jd.requirements:
         raise HTTPException(409, "Analyze the job description before matching")
-    skills, evidence, _ = load_profile_state(db, user.id)
-    return calculate_readiness(jd.requirements, skills, evidence)
+    from app.services.career_summary import confirmed_profile
+    facts = confirmed_profile(db, user.id)
+    skills = [item["name"] for item in facts["skills"]]
+    evidence = {item["name"]: item["sources"] for item in facts["skills"]}
+    requirements, _ = review_stored_requirements(jd.requirements)
+    return calculate_readiness(requirements, skills, evidence)
 
 
 @router.delete("/{jd_id}", status_code=204)

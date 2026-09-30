@@ -45,7 +45,8 @@ export type JD = {
   company?: string;
   domain?: string;
   raw_text: string;
-  requirements: Array<{ skill: string; importance: string; weight: number }>;
+  analysis?: { general_competencies?: string[]; requirement_method?: string; responsibilities?: string[]; qualifications?: string[] };
+  requirements: Array<{ skill: string; importance: string; weight: number; category?: string; evidence_expectation?: string; source_excerpt?: string | null }>;
   created_at: string;
 };
 export type Match = {
@@ -59,6 +60,10 @@ export type Match = {
     similarity: number;
     evidence: Array<{ title: string; type: string }>;
     weight: number;
+    importance?: string;
+    category?: string;
+    evidence_expectation?: string;
+    source_excerpt?: string | null;
   }>;
   disclaimer: string;
 };

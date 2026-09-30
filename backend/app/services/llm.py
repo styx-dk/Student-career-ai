@@ -54,15 +54,25 @@ class LLMProvider(ABC):
 
     def analyze_jd(self, text: str) -> JDAnalysis:
         return self.generate_structured(
-            f"{SYSTEM_GUARDRAIL}\nExtract this job description.\nJOB DESCRIPTION:\n{text[:50000]}",
+            f"{SYSTEM_GUARDRAIL}\nAnalyze this job description for a student. Extract atomic, concrete requirements "
+            "that a student can learn or support with a project, course, credential, or experience. Use exact technology names "
+            "such as Git, Python, React, SQL—not placeholders such as 'core programming languages' or 'version control tools'. "
+            "Classify communication, teamwork, attention to detail and general problem solving as soft_skill/general_competencies; "
+            "do not mix them with technical coverage. For every requirement explain what convincing student evidence would look like "
+            "and preserve a short supporting excerpt from the job description. Do not invent a technology that is not named. "
+            "Required means explicitly mandatory; otherwise use preferred.\nJOB DESCRIPTION:\n"
+            f"{text[:50000]}",
             JDAnalysis,
         )
 
     def generate_profile_summary(self, facts: dict[str, Any]) -> str:
         return self.generate_text(
-            f"{SYSTEM_GUARDRAIL}\nWrite one professional profile paragraph of 80–120 words. "
-            "Synthesize the strongest themes; do not enumerate every skill or record. "
-            "Do not call self-confirmed information externally verified, and do not invent proficiency. "
+            f"{SYSTEM_GUARDRAIL}\nWrite a detailed student profile narrative of 180–260 words in three short paragraphs: "
+            "(1) current academic/career direction, (2) concrete projects, education, internships or credentials and what the student did, "
+            "and (3) documented skill themes plus important limitations in the available evidence. Prioritize accomplishments and outcomes "
+            "that actually appear in the facts. Do not turn a resume filename into experience, enumerate every skill, or repeat counts for filler. "
+            "Distinguish resume claims from other reviewed documents. Do not call self-confirmed information externally verified, infer proficiency, "
+            "or invent a specialization, impact, date, metric, goal, or experience. If the evidence is narrow, say so constructively. "
             "Use only these confirmed facts:\n"
             f"{json.dumps(facts, default=str)}"
         )

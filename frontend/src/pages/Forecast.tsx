@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Line,
   LineChart,
@@ -33,19 +34,21 @@ type ForecastData = {
   scope?: string;
 };
 export function Forecast() {
-  const [domain, setDomain] = useState("Data Analytics");
-  const [skill, setSkill] = useState("sql");
+  const [params, setParams] = useSearchParams();
+  const [domain, setDomain] = useState(params.get("domain") || "Data Analytics");
+  const [skill, setSkill] = useState(params.get("skill") || "sql");
+  const [catalog, setCatalog] = useState<Record<string, string[]>>({});
   const [data, setData] = useState<ForecastData>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  async function submit() {
+  async function submit(nextDomain = domain, nextSkill = skill) {
     setError("");
     setBusy(true);
     setData(undefined);
     try {
       setData(
         await api(
-          `/forecasts?domain=${encodeURIComponent(domain)}&skill=${encodeURIComponent(skill.trim())}`,
+          `/forecasts?domain=${encodeURIComponent(nextDomain)}&skill=${encodeURIComponent(nextSkill.trim())}`,
         ),
       );
     } catch (e) {
@@ -54,6 +57,16 @@ export function Forecast() {
       setBusy(false);
     }
   }
+  useEffect(() => {
+    void api<Record<string, string[]>>("/forecasts/catalog").then((result) => {
+      setCatalog(result);
+      const chosenDomain = result[domain] ? domain : Object.keys(result)[0] || domain;
+      const chosenSkill = result[chosenDomain]?.includes(skill) ? skill : result[chosenDomain]?.[0] || skill;
+      setDomain(chosenDomain);
+      setSkill(chosenSkill);
+      if (params.get("skill")) void submit(chosenDomain, chosenSkill);
+    }).catch((e) => setError(e instanceof Error ? e.message : "Could not load the published market catalog"));
+  }, []);
   const chart = [
     ...(data?.historical.map((x) => ({
       month: x.month,
@@ -76,25 +89,21 @@ export function Forecast() {
           className="forecast-controls section-gap"
           onSubmit={(e) => {
             e.preventDefault();
+            setParams({ domain, skill });
             void submit();
           }}
         >
           <label>
             Area of interest
-            <select value={domain} onChange={(e) => setDomain(e.target.value)}>
-              <option>Software Development</option>
-              <option>Data Analytics</option>
-              <option>Data Science</option>
+            <select value={domain} onChange={(e) => { const next = e.target.value; setDomain(next); setSkill(catalog[next]?.[0] || ""); }}>
+              {Object.keys(catalog).map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
           <label>
             Skill
-            <input
-              required
-              value={skill}
-              onChange={(e) => setSkill(e.target.value)}
-              placeholder="e.g. Python"
-            />
+            <select required value={skill} onChange={(e) => setSkill(e.target.value)}>
+              {(catalog[domain] || []).map((item) => <option key={item}>{item}</option>)}
+            </select>
           </label>
           <button className="primary" disabled={busy || !skill.trim()}>
             {busy ? "Loading..." : "Explore demand"}
@@ -123,7 +132,7 @@ export function Forecast() {
                   <h2>
                     {data.skill} · {data.domain}
                   </h2>
-                  <span className="model-chip">{data.scope === "historical_experiment" ? "Historical experiment" : "ARIMA estimate"}</span>
+                  <span className="model-chip">{data.scope === "historical_experiment" ? `Historical · ${data.forecast[0]?.model || "model"}` : data.forecast[0]?.model || "Forecast"}</span>
                 </div>
                 <div className="chart">
                   <ResponsiveContainer>

@@ -1,0 +1,120 @@
+[
+  {
+    "domain": "Data Analytics",
+    "skill": "python",
+    "mae": 0.018880989692823202,
+    "rmse": 0.02032787943069594,
+    "naive_mae": 0.018880989692823202,
+    "beats_naive": false,
+    "selected_model": "LastValueBaseline",
+    "selection_method": "lowest MAE on one three-month holdout, including last-value baseline",
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.36470588235294116,
+      0.35526315789473684,
+      0.3176470588235294
+    ],
+    "predicted": [
+      0.345679012345679,
+      0.345679012345679,
+      0.345679012345679
+    ],
+    "warnings": []
+  },
+  {
+    "domain": "Data Analytics",
+    "skill": "tableau",
+    "mae": 0.016886442686236274,
+    "rmse": 0.019818179780590455,
+    "naive_mae": 0.016886442686236274,
+    "beats_naive": false,
+    "selected_model": "LastValueBaseline",
+    "selection_method": "lowest MAE on one three-month holdout, including last-value baseline",
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.3411764705882353,
+      0.3157894736842105,
+      0.32941176470588235
+    ],
+    "predicted": [
+      0.345679012345679,
+      0.345679012345679,
+      0.345679012345679
+    ],
+    "warnings": []
+  },
+  {
+    "domain": "Data Analytics",
+    "skill": "azure",
+    "mae": 0.013624202117494169,
+    "rmse": 0.021000306601049505,
+    "naive_mae": 0.013624202117494169,
+    "beats_naive": false,
+    "selected_model": "LastValueBaseline",
+    "selection_method": "lowest MAE on one three-month holdout, including last-value baseline",
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.047058823529411764,
+      0.013157894736842105,
+      0.047058823529411764
+    ],
+    "predicted": [
+      0.04938271604938271,
+      0.04938271604938271,
+      0.04938271604938271
+    ],
+    "warnings": []
+  },
+  {
+    "domain": "Data Analytics",
+    "skill": "machine learning",
+    "mae": 0.00392156862745098,
+    "rmse": 0.006792356108113244,
+    "naive_mae": 0.00392156862745098,
+    "beats_naive": false,
+    "selected_model": "LastValueBaseline",
+    "selection_method": "lowest MAE on one three-month holdout, including last-value baseline",
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.0,
+      0.0,
+      0.011764705882352941
+    ],
+    "predicted": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "warnings": []
+  },
+  {
+    "domain": "Data Analytics",
+    "skill": "java",
+    "mae": 0.011360395177106491,
+    "rmse": 0.014758821155807955,
+    "naive_mae": 0.011687625017518377,
+    "beats_naive": true,
+    "selected_model": "LinearTrend",
+    "selection_method": "lowest MAE on one three-month holdout, including last-value baseline",
+    "test_start": "2023-10-01",
+    "test_end": "2023-12-01",
+    "actual": [
+      0.047058823529411764,
+      0.013157894736842105,
+      0.023529411764705882
+    ],
+    "predicted": [
+      0.023505723644716096,
+      0.02307487200293306,
+      0.022918303384173024
+    ],
+    "warnings": [
+      "Full-series ARIMA failed; used linear fallback: ARIMA optimizer did not converge",
+      "Non-invertible starting MA parameters found. Using zeros as starting parameters."
+    ]
+  }
+]

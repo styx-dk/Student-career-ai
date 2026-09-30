@@ -66,3 +66,28 @@ prevent downloads; the app now explains this rather than only showing Failed to 
 Deletions require confirmation and owner-scoped API checks. They are permanent,
 not a trash/recovery workflow. Shared market data and the learning catalog are
 not student-owned items and do not get student delete controls.
+
+## Evidence-based profile and role analysis
+
+The profile overview now separates its narrative from structured facts: strongest
+documented themes, source repetition, dated-entry coverage, resume-only claims,
+known limitations, target-role alignment and prioritized next steps. A single source
+is identified as a single source; it is not turned into an invented proficiency.
+Legacy resumes that were stored as one career entry are flagged for reanalysis.
+
+Role analysis asks the active LLM for atomic named technologies and an evidence
+expectation for every requirement. Broad behavioral expectations such as teamwork
+remain visible but are excluded from technical coverage. Matching uses only reviewed
+document evidence, not unconfirmed personal entries. Previously analyzed roles are
+filtered for common vague phrases when read; use Reanalyze requirements precisely to
+persist the richer requirement details and excerpts.
+
+## Expanded historical market experiment
+
+The audited 1,897-posting Data Analytics dataset now also publishes Python, Tableau,
+Azure, machine learning and Java for the historical Oct 2022–Dec 2023 training window
+and Jan–Jun 2024 experiment. ARIMA, linear trend and a last-value baseline are compared
+on one three-month holdout. The lowest-error candidate is used; the conservative
+baseline is retained when complex models do not improve on it. This remains a past
+experiment with uneven sampling, not a 2026 market prediction. The career cockpit
+links exact role skills to available historical context.

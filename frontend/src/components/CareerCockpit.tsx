@@ -4,12 +4,13 @@ import { ArrowUpRight, Compass, Layers, Sparkles } from "lucide-react";
 import { api } from "../lib/api";
 import { Card, Notice, Pager } from "./UI";
 
-type Requirement = { skill: string; importance: string; sources: { title: string; document_id: string | null; record_id: string; basis: string }[] };
+type Requirement = { skill: string; importance: string; category: string; classification: string; similarity: number; evidence_expectation: string; source_excerpt?: string | null; market_contexts: string[]; sources: { title: string; document_id: string | null; record_id: string; basis: string }[] };
 type Cockpit = {
   roles: { id: string; name: string }[]; selected_role: string | null;
   requirements: Requirement[]; supported: number; total: number;
   journey: { label: string; count: number; detail: string; href: string }[];
   resumes: { id: string; name: string; changed_sources: number; new_records: number; profile_changed: boolean; needs_review: boolean }[];
+  general_competencies: string[];
 };
 
 export function CareerCockpit() {
@@ -56,6 +57,10 @@ export function CareerCockpit() {
           <p className="eyebrow"><Sparkles size={16} /> Evidence explorer</p>
           {selected ? <>
             <h2>{selected.skill}</h2>
+            <p><span className="model-chip">{selected.category.replaceAll("_", " ")}</span> · {selected.importance}</p>
+            <h3>What useful evidence looks like</h3><p>{selected.evidence_expectation}</p>
+            {selected.source_excerpt && <blockquote>From the role: “{selected.source_excerpt}”</blockquote>}
+            {!!selected.market_contexts.length && <Link className="secondary" to={`/planning/trends?domain=${encodeURIComponent(selected.market_contexts[0])}&skill=${encodeURIComponent(selected.skill)}`}>View historical market context →</Link>}
             {selected.sources.length ? <><p>These reviewed entries support this requirement. Review the original before making a claim.</p>{selected.sources.slice(0, 5).map(s => <Link className="record-link" key={s.record_id} to={s.document_id ? `/documents/${s.document_id}` : "/profile?tab=experience"}><span><b>{s.title}</b><small>{s.basis}</small></span><ArrowUpRight size={17} /></Link>)}{selected.sources.length > 5 && <Link to="/profile?tab=skills">Explore all sources in your profile →</Link>}</> : <>
               <p>No reviewed evidence yet. That does not mean you lack this skill.</p>
               <h3>Your suggested mini-project</h3><p>Create a small example using <b>{selected.skill}</b> for your target role. Choose a problem you can explain and a result you can demonstrate.</p>
@@ -66,6 +71,7 @@ export function CareerCockpit() {
           </> : <><h2>Follow the evidence.</h2><p>Select a skill to see its source documents or a practical way to build evidence for it.</p><div className="connection-illustration" aria-hidden="true"><span>Document</span><span>↓</span><span>Your skills</span><span>↓</span><span>Target role</span></div><Link to="/planning/actions">Open your action plan →</Link></>}
         </Card>
       </div>
+      {!!data.general_competencies.length && <Card className="section-gap"><p className="eyebrow">Other employer expectations</p><h2>Clarify broad requirements; prepare examples for behaviors</h2><p>{data.general_competencies.join(" · ")}</p><p className="helper">These phrases are important but too broad to score like named technologies. Reanalyze the role for concrete tools; prepare a short situation-action-result example for behavioral expectations.</p></Card>}
       {!!data.resumes.length && <Card className="section-gap"><div className="card-head"><h2>Resume freshness</h2><Link to="/resumes">Open resume studio →</Link></div><p>Saved resumes are snapshots. New evidence does not silently rewrite a resume you already created.</p>{data.resumes.map(r => <div className="freshness-row" key={r.id}><div><b>{r.name}</b><p>{r.needs_review ? `${r.changed_sources} changed or removed sources · ${r.new_records} new entries${r.profile_changed ? " · profile details changed" : ""}` : "No source changes detected since creation."}</p></div><Link className="secondary" to={`/resumes?preview=${encodeURIComponent(r.id)}`}>{r.needs_review ? "Review & create a new snapshot" : "Preview resume"}</Link></div>)}</Card>}
     </>}
   </section>;

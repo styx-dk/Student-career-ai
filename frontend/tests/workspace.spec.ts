@@ -86,6 +86,12 @@ test("career cockpit connects evidence and dark mode persists", async ({ page })
   await expect(page.getByRole("heading", { name: "Career cockpit", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "python 1 source" }).click();
   await expect(page.getByRole("link", { name: "Example Python project Reviewed document" })).toHaveAttribute("href", "/documents/doc-0");
+  await expect(page.getByText("Show an API you built.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "View historical market context" })).toHaveAttribute("href", "/planning/trends?domain=Data%20Analytics&skill=python");
+  await page.getByRole("link", { name: "View historical market context" }).click();
+  await expect(page.getByRole("heading", { name: "python · Data Analytics" })).toBeVisible();
+  await expect(page.getByText("Historical · LastValueBaseline")).toBeVisible();
+  await page.goto("/dashboard");
   await page.getByRole("button", { name: "sql Build evidence" }).click();
   await expect(page.getByRole("heading", { name: "Your suggested mini-project" })).toBeVisible();
   await page.getByRole("button", { name: "Switch to dark mode" }).click();
@@ -100,6 +106,19 @@ test("career cockpit connects evidence and dark mode persists", async ({ page })
   }
   await page.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+test("profile explains strengths, evidence quality, role gaps and next actions", async ({ page }) => {
+  await setup(page);
+  await page.goto("/profile");
+  await expect(page.getByRole("heading", { name: "Your evidence-based story" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Strongest documented themes" })).toBeVisible();
+  await expect(page.getByText("reviewed work · repeated evidence · Example source")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Where the profile is reliable—and thin" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "API developer" })).toBeVisible();
+  await expect(page.getByText("Show schema and queries.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your next three useful moves" })).toBeVisible();
+  await page.screenshot({ path: "test-results/profile-insights.png", fullPage: true });
 });
 
 test("resume preview and authenticated PDF download", async ({ page }) => {
@@ -184,6 +203,7 @@ const records = Array.from({ length: 200 }, (_, i) => ({
 }));
 const evidence = {
   summary: "EXAMPLE profile summary. ".repeat(40),
+  insights: { strengths: [{ skill: "Example skill 0", source_count: 2, contexts: ["Example source"], confidence: "repeated evidence", basis: "reviewed work" }], portfolio_health: { reviewed_entries: 200, documented_skills: 100, dated_entries: 100, multi_source_skills: 1, resume_claim_entries: 0 }, limitations: [{ code: "dates", text: "Some entries need dates.", href: "/profile?tab=timeline" }], alignment: { role_id: "role-1", role_name: "API developer", score: 50, supported: [{ skill: "python" }], gaps: [{ skill: "sql", evidence_expectation: "Show schema and queries." }], general_competencies: [], disclaimer: "Not a hiring probability." }, next_steps: [{ code: "sql", text: "Build evidence for SQL.", href: "/planning/roles" }] },
   skills: Array.from({ length: 100 }, (_, i) => ({
     name: "Example skill " + i,
     sources: [
@@ -232,8 +252,10 @@ async function setup(page: Page, empty = false) {
       body = docs.find((d) => path === "/documents/" + d.id) || docs[0];
     else if (path === "/profile/evidence")
       body = empty ? { summary: null, skills: [], records: [] } : evidence;
-    else if (path === "/profile/cockpit") body = { roles: empty ? [] : [{ id: "role-1", name: "API developer" }], selected_role: empty ? null : "role-1", requirements: empty ? [] : [{ skill: "python", importance: "required", sources: [{ title: "Example Python project", document_id: "doc-0", record_id: "record-0", basis: "Reviewed document" }] }, { skill: "sql", importance: "required", sources: [] }], supported: empty ? 0 : 1, total: empty ? 0 : 2, resumes: [], journey: [{ label: "Collect", count: empty ? 0 : 25, detail: "documents", href: "/documents" }, { label: "Understand", count: empty ? 0 : 200, detail: "entries", href: "/profile" }, { label: "Prepare", count: empty ? 0 : 1, detail: "roles", href: "/planning/roles" }, { label: "Apply", count: 0, detail: "resumes", href: "/resumes" }] };
+    else if (path === "/profile/cockpit") body = { roles: empty ? [] : [{ id: "role-1", name: "API developer" }], selected_role: empty ? null : "role-1", requirements: empty ? [] : [{ skill: "python", importance: "required", category: "technical", classification: "Strong Match", similarity: 1, evidence_expectation: "Show an API you built.", source_excerpt: "Python required", market_contexts: ["Data Analytics"], sources: [{ title: "Example Python project", document_id: "doc-0", record_id: "record-0", basis: "Reviewed document" }] }, { skill: "sql", importance: "required", category: "technical", classification: "Missing", similarity: 0, evidence_expectation: "Show schema and queries.", market_contexts: ["Data Analytics"], sources: [] }], supported: empty ? 0 : 1, total: empty ? 0 : 2, general_competencies: ["team communication"], resumes: [], journey: [{ label: "Collect", count: empty ? 0 : 25, detail: "documents", href: "/documents" }, { label: "Understand", count: empty ? 0 : 200, detail: "entries", href: "/profile" }, { label: "Prepare", count: empty ? 0 : 1, detail: "roles", href: "/planning/roles" }, { label: "Apply", count: 0, detail: "resumes", href: "/resumes" }] };
     else if (path === "/profile/progress") body = { days: [{ date: "2026-09-29", completed: true }], active_days: 1, reviewed_today: true, quests: [{ title: "Review one document", detail: "Check your extracted facts.", href: "/documents/doc-0" }], resumes: [{ id: "doc-0", name: "Example resume", confirmed: false, issues: ["Check your education dates."] }] };
+    else if (path === "/forecasts/catalog") body = { "Data Analytics": ["python", "sql"] };
+    else if (path === "/forecasts") body = { domain: "Data Analytics", skill: url.searchParams.get("skill"), historical: [{ month: "2023-12-01", demand_rate: .3, job_count: 30, total_jobs: 100 }], forecast: [{ month: "2024-01-01", predicted_rate: .3, lower_bound: .2, upper_bound: .4, trend: "Stable", model: "LastValueBaseline" }], notice: "Historical experiment; not a current market prediction.", available: true, scope: "historical_experiment" };
     else if (path === "/records") body = empty ? [] : records;
     else if (path === "/profile")
       body = {

@@ -66,3 +66,20 @@ body { background: var(--page); color: var(--ink); }
 @media(max-width: 900px) { .cockpit-grid { grid-template-columns: 1fr; } .journey-path { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width: 540px) { .cockpit-heading,.freshness-row { align-items: stretch; flex-direction: column; } .journey-path a { padding: 14px; } .theme-toggle { padding: 7px 10px; } .theme-toggle span { display: none; } }
 @media(prefers-reduced-motion: reduce) { .journey-path a:hover { transform: none; } }
+.profile-intelligence { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.strength-list { display: grid; gap: 8px; margin-top: 16px; }
+.strength-list button { display: grid; gap: 4px; text-align: left; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 12px; }
+.strength-list button:hover { border-color: var(--blue); background: var(--blue2); }
+.strength-list span,.insight-row small { color: var(--muted); font-size: .76rem; line-height: 1.5; }
+.health-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 16px 0; }
+.health-grid span { background: var(--blue2); border-radius: 9px; padding: 12px; color: var(--muted); font-size: .72rem; }
+.health-grid b { display: block; color: var(--ink); font-size: 1.3rem; }
+.insight-row { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding: 12px 0; color: var(--ink); font-size: .84rem; }
+.insight-row > span { display: grid; gap: 4px; }
+.connected-steps { list-style: none; padding: 0; display: grid; gap: 12px; }
+.connected-steps li { display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 12px; align-items: center; }
+.connected-steps li > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--blue2); color: var(--blue); font-weight: 700; }
+.connected-steps a { display: flex; justify-content: space-between; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); }
+.requirement-meta { display: block; text-transform: capitalize; margin: 3px 0; }
+.mission-card blockquote { border-left: 3px solid var(--blue); margin: 14px 0; padding: 10px 14px; color: var(--muted); font-size: .85rem; }
+@media(max-width: 760px) { .profile-intelligence { grid-template-columns: 1fr; } .health-grid { grid-template-columns: 1fr; } }
