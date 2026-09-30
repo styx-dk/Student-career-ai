@@ -37,13 +37,13 @@ For local text generation:
 ```dotenv
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5:3b
-OLLAMA_NUM_CTX=8192
+OLLAMA_MODEL=qwen3:8b
+OLLAMA_NUM_CTX=16384
 OLLAMA_NUM_PREDICT=4096
-OLLAMA_TIMEOUT_SECONDS=180
+OLLAMA_TIMEOUT_SECONDS=300
 ```
 
-Install/start Ollama on the backend machine and run `ollama pull qwen2.5:3b` before choosing it. The model must support structured output. The 3B default is suitable for lightweight testing; a capable 7B/8B-or-larger instruct model generally gives more complete results on complex resumes if the machine has enough memory. Increase `OLLAMA_NUM_CTX` only when the selected model and available memory support it.
+Install/start Ollama on the backend machine and run `ollama pull qwen3:8b` before choosing it. The model must support structured output. The Qwen3 8B default is intended for stronger document and profile analysis than a small test model. Increase `OLLAMA_NUM_CTX` only when the selected model and available memory support it.
 
 After installing this code update, restart the backend once. Future AI-only .env edits do not require a restart. Database/auth/CORS settings still require restart. Process-level environment variables take precedence over .env; clear any stale shell variables if they override your file. The old LLM_FALLBACK_PROVIDER value does not trigger automatic fallback.
 

@@ -55,7 +55,7 @@ def test_ollama_repairs_invalid_structured_response_once(monkeypatch):
 
     class FakeClient:
         def __init__(self, **kwargs):
-            assert kwargs["timeout"] == 180
+            assert kwargs["timeout"] == 300
 
         def __enter__(self):
             return self
@@ -98,4 +98,3 @@ def test_role_requirements_omit_model_inventions_and_invalid_quotes():
     )
     assert [item["skill"] for item in requirements] == ["python"]
     assert requirements[0]["source_excerpt"] == "Build backend services with Python"
-
