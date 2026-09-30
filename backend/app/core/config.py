@@ -14,6 +14,9 @@ class AISettings(BaseSettings):
     llm_provider: Literal["ollama", "gemini"] = "ollama"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:3b"
+    ollama_num_ctx: int = Field(default=8192, ge=4096, le=131072)
+    ollama_num_predict: int = Field(default=4096, ge=512, le=16384)
+    ollama_timeout_seconds: int = Field(default=180, ge=30, le=900)
     gemini_api_key: str = Field(default="", repr=False)
     gemini_model: str = ""
 

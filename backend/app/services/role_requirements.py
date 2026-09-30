@@ -1,7 +1,7 @@
 """Turn LLM output into concrete, evidence-oriented role requirements."""
 import re
 from typing import Any
-from app.services.skills import normalize_skill
+from app.services.skills import DEFAULT_ALIASES, normalize_skill
 
 
 VAGUE_PATTERNS = (
@@ -26,7 +26,12 @@ def is_vague(value: str) -> bool:
     return not skill or any(re.fullmatch(pattern, skill) for pattern in VAGUE_PATTERNS)
 
 
-def clean_extracted_requirements(analysis) -> tuple[list[dict[str, Any]], list[str]]:
+def _source_mentions_skill(normalized_source: str, skill: str) -> bool:
+    candidates = {skill, *(alias for alias, canonical in DEFAULT_ALIASES.items() if canonical == skill)}
+    return any(candidate.casefold() in normalized_source for candidate in candidates)
+
+
+def clean_extracted_requirements(analysis, source_text: str | None = None) -> tuple[list[dict[str, Any]], list[str]]:
     details = list(analysis.requirements)
     if not details:
         details = []
@@ -37,6 +42,7 @@ def clean_extracted_requirements(analysis) -> tuple[list[dict[str, Any]], list[s
         for name in analysis.technologies:
             details.append({"skill": name, "importance": "preferred", "category": "tool"})
     accepted, competencies, seen = [], list(analysis.general_competencies), set()
+    normalized_source = re.sub(r"\s+", " ", source_text or "").casefold()
     for raw in details:
         item = raw.model_dump() if hasattr(raw, "model_dump") else dict(raw)
         skill = _canonical(str(item.get("skill", "")))
@@ -44,6 +50,11 @@ def clean_extracted_requirements(analysis) -> tuple[list[dict[str, Any]], list[s
         if category == "soft_skill" or is_vague(skill):
             if skill and skill not in competencies:
                 competencies.append(skill)
+            continue
+        excerpt = str(item.get("source_excerpt") or "").strip()
+        excerpt_is_valid = bool(excerpt) and re.sub(r"\s+", " ", excerpt).casefold() in normalized_source
+        # A model-generated role requirement must be traceable to the supplied JD.
+        if source_text is not None and not _source_mentions_skill(normalized_source, skill):
             continue
         if skill in seen:
             # Required wins over preferred, while keeping the richer explanation.
@@ -55,7 +66,7 @@ def clean_extracted_requirements(analysis) -> tuple[list[dict[str, Any]], list[s
         accepted.append({"skill": skill, "label": skill, "importance": importance,
             "weight": 2.0 if importance == "required" else 1.0, "category": category,
             "evidence_expectation": item.get("evidence_expectation") or f"Show a project or experience where you applied {skill} and explain the result.",
-            "source_excerpt": item.get("source_excerpt")})
+            "source_excerpt": excerpt if excerpt_is_valid else None})
     return accepted[:25], list(dict.fromkeys(str(v).strip() for v in competencies if str(v).strip()))[:20]
 
 

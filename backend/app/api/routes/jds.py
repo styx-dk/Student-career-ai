@@ -79,12 +79,14 @@ def analyze_jd(jd_id: UUID, user: CurrentUser = Depends(get_current_user), db: S
     if not jd:
         raise HTTPException(404, "Job description not found")
     try:
-        result = provider_for("text", selection.provider, selection.model).analyze_jd(jd.raw_text)
+        provider = provider_for("text", selection.provider, selection.model)
+        result = provider.analyze_jd(jd.raw_text)
     except Exception as exc:
         raise HTTPException(503, public_ai_error(exc)) from None
-    requirements, competencies = clean_extracted_requirements(result)
+    requirements, competencies = clean_extracted_requirements(result, jd.raw_text)
     jd.analysis = {**result.model_dump(mode="json"), "general_competencies": competencies,
-                   "requirement_method": "atomic_evidence_oriented_v2"}
+                   "requirement_method": "source_grounded_v3", "provider": getattr(provider, "name", selection.provider),
+                   "model": getattr(provider, "model", None)}
     jd.job_title = result.job_title or jd.job_title
     jd.company = result.company or jd.company
     jd.domain = result.domain

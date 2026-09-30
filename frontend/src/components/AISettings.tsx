@@ -160,7 +160,10 @@ export function AISettings() {
             <Notice>
               Ollama must be running on the backend machine and the model must
               be installed. Images and scanned PDFs are not supported through
-              Ollama here; they will not silently be sent to Gemini.
+              Ollama here; they will not silently be sent to Gemini. For complex
+              resumes and long documents, a capable 7B/8B-or-larger instruct
+              model usually gives more complete extraction than a 3B model,
+              if your computer has enough memory.
             </Notice>
           )}
           <div className="button-row">

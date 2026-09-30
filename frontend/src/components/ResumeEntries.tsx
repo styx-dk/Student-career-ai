@@ -5,6 +5,7 @@ export type ResumeEntry = {
   document_type: string; title: string; summary: string;
   organization: string | null; start_date: string | null; end_date: string | null;
   skills: string[]; mentioned_skills: string[]; accomplishments: string[]; uncertainties: string[];
+  skill_evidence?: { skill: string; excerpt: string; attribution: string; support: string }[];
 };
 export function ResumeEntries({ entries, onChange, disabled }: { entries: ResumeEntry[]; onChange: (entries: ResumeEntry[]) => void; disabled: boolean }) {
   const [page, setPage] = useState(1);
@@ -30,6 +31,10 @@ export function ResumeEntries({ entries, onChange, disabled }: { entries: Resume
             <label>End date<input type="date" value={entry.end_date || ""} onChange={e => update(index, { end_date: e.target.value || null })} /></label>
           </div>
           <label>Supported skills (one per line)<textarea value={entry.skills.join("\n")} onChange={e => update(index, { skills: e.target.value.split("\n") })} /></label>
+          {!!entry.skill_evidence?.length && <details>
+            <summary>Why these skills were extracted ({entry.skill_evidence.length})</summary>
+            <ul>{entry.skill_evidence.map((item, evidenceIndex) => <li key={`${item.skill}-${evidenceIndex}`}><strong>{item.skill}:</strong> “{item.excerpt}”</li>)}</ul>
+          </details>}
           <label>Accomplishments (one per line)<textarea value={entry.accomplishments.join("\n")} onChange={e => update(index, { accomplishments: e.target.value.split("\n") })} /></label>
           <label>Details to check (one per line)<textarea value={entry.uncertainties.join("\n")} onChange={e => update(index, { uncertainties: e.target.value.split("\n") })} /></label>
           <button className="secondary" type="button" onClick={() => onChange(entries.filter((_, i) => i !== index))}>Exclude this entry</button>
@@ -38,7 +43,7 @@ export function ResumeEntries({ entries, onChange, disabled }: { entries: Resume
     })}
     <Pager page={current} total={entries.length} size={5} onChange={setPage} />
     <button className="secondary" type="button" disabled={disabled || entries.length >= 50} onClick={() => {
-      onChange([...entries, { document_type: "project", title: "", summary: "", organization: null, start_date: null, end_date: null, skills: [], mentioned_skills: [], accomplishments: [], uncertainties: [] }]);
+      onChange([...entries, { document_type: "project", title: "", summary: "", organization: null, start_date: null, end_date: null, skills: [], mentioned_skills: [], skill_evidence: [], accomplishments: [], uncertainties: [] }]);
       setPage(Math.ceil((entries.length + 1) / 5));
     }}>Add an entry</button>
   </section>;

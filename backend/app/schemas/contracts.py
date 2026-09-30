@@ -206,6 +206,14 @@ class ResumeContent(BaseModel):
     achievements: list[dict[str, Any]] = Field(default_factory=list)
 
 
+class ProfileNarrative(BaseModel):
+    """Structured first, then rendered as the student's profile narrative."""
+
+    direction: str = Field(min_length=30, max_length=1200)
+    documented_work: str = Field(min_length=40, max_length=1800)
+    strengths_and_next_steps: str = Field(min_length=40, max_length=1800)
+
+
 class ExtractionReview(BaseModel):
     decision: Literal["accept", "reject"]
     corrected_result: dict[str, Any] | None = None

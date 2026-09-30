@@ -137,12 +137,17 @@ def process_document(document_id: UUID, user: CurrentUser = Depends(get_current_
             else:
                 if not raw_text.strip():
                     raise ValueError("No readable text found")
-                if len(raw_text) > 50000:
-                    raise ValueError("Document exceeds the 50,000-character analysis limit. Split it into smaller files.")
                 provider = provider_for("text", selection.provider, selection.model)
                 result = provider.analyze_text_document(raw_text, DocumentAnalysis)
+        ai_result = result.model_dump(mode="json")
+        ai_result["_analysis_meta"] = {
+            "provider": provider.name,
+            "model": getattr(provider, "model", None),
+            "prompt_version": "evidence_grounded_v3",
+            "source_characters": len(raw_text) if raw_text is not None else None,
+        }
         extraction = DocumentExtraction(student_id=user.id, document_id=document.id,
-            provider=provider.name, raw_text=raw_text, ai_result=result.model_dump(mode="json"))
+            provider=provider.name, raw_text=raw_text, ai_result=ai_result)
         db.add(extraction)
         if not document.category:
             document.category = result.document_type
@@ -197,6 +202,7 @@ def review_extraction(document_id: UUID, payload: ExtractionReview, user: Curren
         record.end_date = entry.end_date
         record.skills = entry.skills
         record.metadata_json = {"accomplishments": entry.accomplishments, "uncertainties": entry.uncertainties,
+                                "skill_evidence": [item.model_dump(mode="json") for item in entry.skill_evidence],
                                 "source_kind": result.document_type, "resume_claim": result.document_type == "resume"}
         record.evidence_state = EvidenceState.user_confirmed
         db.add(record)

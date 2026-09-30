@@ -1062,9 +1062,20 @@ details li {
 }
 .skill-edit {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
   margin: 0.7rem 0;
+}
+.skill-edit > input {
+  flex: 1;
+}
+.skill-source {
+  flex-basis: 100%;
+  margin: -0.15rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border-left: 3px solid var(--blue);
+  background: var(--blue2);
 }
 .file-preview {
   width: 100%;

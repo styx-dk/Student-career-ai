@@ -8,7 +8,7 @@ Routing rules:
 - images/scanned PDFs: require an explicitly selected Gemini provider; choosing Ollama shows a recoverable error instead of silently sending content to the cloud
 - no image is sent to the text-only Qwen configuration
 
-All database-bound output is Pydantic validated. The shared system constraint requires missing fields to remain `null` or `[]`. Provider failure never removes the original evidence.
+All database-bound output is Pydantic validated. Invalid structured responses receive one constrained repair attempt. Text-document skills must include a verbatim source excerpt; the server verifies that excerpt and demotes unsupported skills before review. Job requirements are also checked against the source description. The shared system constraint requires missing fields to remain `null` or `[]`. Provider failure never removes the original evidence.
 
 ## Switch without editing code
 
@@ -38,9 +38,12 @@ For local text generation:
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=qwen2.5:3b
+OLLAMA_NUM_CTX=8192
+OLLAMA_NUM_PREDICT=4096
+OLLAMA_TIMEOUT_SECONDS=180
 ```
 
-Install/start Ollama on the backend machine and run `ollama pull qwen2.5:3b` before choosing it. The model must support structured output.
+Install/start Ollama on the backend machine and run `ollama pull qwen2.5:3b` before choosing it. The model must support structured output. The 3B default is suitable for lightweight testing; a capable 7B/8B-or-larger instruct model generally gives more complete results on complex resumes if the machine has enough memory. Increase `OLLAMA_NUM_CTX` only when the selected model and available memory support it.
 
 After installing this code update, restart the backend once. Future AI-only .env edits do not require a restart. Database/auth/CORS settings still require restart. Process-level environment variables take precedence over .env; clear any stale shell variables if they override your file. The old LLM_FALLBACK_PROVIDER value does not trigger automatic fallback.
 

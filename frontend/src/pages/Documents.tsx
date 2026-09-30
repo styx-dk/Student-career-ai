@@ -41,6 +41,12 @@ type Analysis = {
   end_date: string | null;
   skills: string[];
   mentioned_skills: string[];
+  skill_evidence?: {
+    skill: string;
+    excerpt: string;
+    attribution: "demonstrated" | "awarded" | "self_reported" | "mentioned";
+    support: "direct" | "indirect" | "unclear";
+  }[];
   accomplishments: string[];
   uncertainties: string[];
   entries?: ResumeEntry[];
@@ -515,8 +521,11 @@ export function Documents() {
                     </div>
                     {skillRows
                       .slice((actualSkillPage - 1) * 10, actualSkillPage * 10)
-                      .map(({ name, index }) => (
-                        <div className="skill-edit" key={index}>
+                      .map(({ name, index }) => {
+                        const evidence = draft.skill_evidence?.find(
+                          (item) => item.skill.toLocaleLowerCase() === name.toLocaleLowerCase(),
+                        );
+                        return <div className="skill-edit" key={index}>
                           <input
                             aria-label={`Skill ${index + 1}`}
                             value={name}
@@ -543,8 +552,14 @@ export function Documents() {
                             <X size={15} />
                             Exclude
                           </button>
-                        </div>
-                      ))}
+                          {evidence && (
+                            <p className="helper skill-source">
+                              <strong>{evidence.attribution.replace("_", " ")} evidence:</strong>{" "}
+                              “{evidence.excerpt}”
+                            </p>
+                          )}
+                        </div>;
+                      })}
                     <Pager
                       page={actualSkillPage}
                       total={skillRows.length}
